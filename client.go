@@ -14,16 +14,16 @@ import (
 )
 
 type Client struct {
-	Parent       *datastore.Client
-	Cache        map[string]interface{}
-	cacheMx      *sync.RWMutex
-	MaxCacheSize int // Size in number of items.
-	cacheKeys    []string
-	cacheKeysMx  *sync.RWMutex
+	Parent       *datastore.Client      // The regular datastore client, which can be used directly if you want to bypass caching.
+	Cache        map[string]interface{} // The application-level cache.
+	MaxCacheSize int                    // Cache size in number of items.
+	cacheKeys    []string               // A slice of all the keys in the cache. Used to determine which entries to evict when the cache is full.
+	cacheMx      *sync.RWMutex          // A mutex to support accessing the cache concurrently.
+	cacheKeysMx  *sync.RWMutex          // A mutex to support accessing the cache keys concurrently.
 }
 
-// Max cache size defaults to 1000 items. To change that, set the
-// GODSCACHE_MAX_CACHE_SIZE environment variable.
+// NewClient is a constructor for making a new godscache client. Start here. It makes a datastore client and stores it in the Parent field.
+// The max cache size defaults to 1000 items. To change that, set the GODSCACHE_MAX_CACHE_SIZE environment variable before running this function.
 func NewClient(ctx context.Context, projectID string, opts ...option.ClientOption) (*Client, error) {
 	dsClient, err := datastore.NewClient(ctx, projectID, opts...)
 	if err != nil {
@@ -52,10 +52,12 @@ func NewClient(ctx context.Context, projectID string, opts ...option.ClientOptio
 	return c, nil
 }
 
+// Run a datastore query. To utilize this with caching, you should perform a KeysOnly() query, and then use Get() on the keys.
 func (c *Client) Run(ctx context.Context, q *datastore.Query) *datastore.Iterator {
 	return c.Parent.Run(ctx, q)
 }
 
+// Put data into the datastore and into the cache. The src value must be a Struct pointer.
 func (c *Client) Put(ctx context.Context, key *datastore.Key, src interface{}) (*datastore.Key, error) {
 	var err error
 	key, err = c.Parent.Put(ctx, key, src)
@@ -91,6 +93,7 @@ func (c *Client) Put(ctx context.Context, key *datastore.Key, src interface{}) (
 	return key, nil
 }
 
+// Get data from the datastore or cache. The dst value must be a Struct pointer.
 func (c *Client) Get(ctx context.Context, key *datastore.Key, dst interface{}) error {
 	keyStr := key.String()
 
@@ -121,9 +124,6 @@ func (c *Client) Get(ctx context.Context, key *datastore.Key, dst interface{}) e
 
 		dstName := reflect.TypeOf(dst).String()
 		cDstName := reflect.TypeOf(cacheDst).String()
-
-		log.Printf("dstName: %v", dstName)
-		log.Printf("cDstName: %v", cDstName)
 
 		if dstName != cDstName {
 			return errors.New("dVal and cVal are not the same struct")
