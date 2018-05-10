@@ -1,3 +1,6 @@
+// Copyright 2018 Jeremy Carter <Jeremy@JeremyCarter.ca>
+// This file may only be used in accordance with the license in the LICENSE file in this directory.
+
 package godscache
 
 import (

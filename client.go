@@ -3,7 +3,7 @@
 
 // Package godscache is a wrapper around the official Google Cloud Datastore Go client library
 // "cloud.google.com/go/datastore", which adds caching to datastore requests. Its name is a play on words,
-// and is actually called Go DS Cache. Note that it is wrapping the newer datastore library, which is
+// and it's actually called Go DS Cache. Note that it is wrapping the newer datastore library, which is
 // intended for use with App Engine Flexible Environment, Compute Engine, or Kubernetes Engine, and is not
 // for use with App Engine Standard.
 //
@@ -12,11 +12,11 @@
 //
 // For the offical Google library documentation, go here: https://godoc.org/cloud.google.com/go/datastore
 //
-// Godscache is designed to allow concurrent datastore requests, and it follows the Google Cloud datastore client
+// Godscache is designed to allow concurrent datastore requests, and it follows the Google Cloud Datastore client
 // library API very closely, to act as a drop-in replacement for the official library from Google.
 //
 // Things which aren't implemented in this library can be used anyway, they just won't be cached.
-// For example, the Client struct holds a Parent member which is the raw Google Datastore Client,
+// For example, the Client struct holds a Parent member which is the raw Google Datastore client,
 // so you can use that instead to make your requests if you need to use some feature that's not implemented
 // in godscache, or if you want to bypass the cache for some reason.
 package godscache
