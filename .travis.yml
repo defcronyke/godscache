@@ -15,7 +15,7 @@ before_install:
 install:
 - go get golang.org/x/tools/cover
 - go get github.com/mattn/goveralls
-- go get -t ./...
+- go get -v -t ./...
 env:
   matrix:
     - GOOGLE_APPLICATION_CREDENTIALS=service-account-key.json
