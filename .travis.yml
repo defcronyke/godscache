@@ -7,7 +7,7 @@ go:
 - 1.10.x
 script:
 - tar zxvf keys.tar.gz
-- go test -v ./... -covermode=count -coverprofile=coverage.out
+- go test -v ./... -covermode=count -coverprofile=coverage.out -race
 - $HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken=$COVERALLS_TOKEN
 before_install:
 - openssl aes-256-cbc -K $encrypted_3bab0e510ecf_key -iv $encrypted_3bab0e510ecf_iv
