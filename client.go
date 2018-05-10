@@ -47,11 +47,13 @@ type Client struct {
 // NewClient is a constructor for making a new godscache client. Start here. It makes a datastore client and stores it in the Parent field.
 // The max cache size defaults to 1000 items. To change that, set the GODSCACHE_MAX_CACHE_SIZE environment variable before running this function.
 func NewClient(ctx context.Context, projectID string, opts ...option.ClientOption) (*Client, error) {
+	// Create datastore client.
 	dsClient, err := datastore.NewClient(ctx, projectID, opts...)
 	if err != nil {
 		return nil, err
 	}
 
+	// Set max cache size in number of items.
 	maxCacheSize := 1000
 	maxCacheSizeStr := os.Getenv("GODSCACHE_MAX_CACHE_SIZE")
 	if maxCacheSizeStr != "" {
@@ -62,6 +64,7 @@ func NewClient(ctx context.Context, projectID string, opts ...option.ClientOptio
 		maxCacheSize = int(maxCacheSize64)
 	}
 
+	// Instantiate a new godscache Client and return a pointer to it.
 	c := &Client{
 		Parent:       dsClient,
 		Cache:        make(map[string]interface{}, maxCacheSize),
@@ -76,30 +79,37 @@ func NewClient(ctx context.Context, projectID string, opts ...option.ClientOptio
 
 // Run a datastore query. To utilize this with caching, you should perform a KeysOnly() query, and then use Get() on the keys.
 func (c *Client) Run(ctx context.Context, q *datastore.Query) *datastore.Iterator {
+	// Perform the query using the datastore client.
 	return c.Parent.Run(ctx, q)
 }
 
 // Put data into the datastore and into the cache. The src value must be a Struct pointer.
 func (c *Client) Put(ctx context.Context, key *datastore.Key, src interface{}) (*datastore.Key, error) {
 	var err error
+
+	// Put data into the datastore.
 	key, err = c.Parent.Put(ctx, key, src)
 	if err != nil {
 		return nil, err
 	}
 
+	// Put data into the cache, indexed by the string representation of the datastore key.
 	keyStr := key.String()
 	c.cacheMx.Lock()
 	c.Cache[keyStr] = src
 	c.cacheMx.Unlock()
 
+	// Put the datastore key string into the slice of cache keys.
 	c.cacheKeysMx.Lock()
 	c.cacheKeys = append(c.cacheKeys, keyStr)
 	c.cacheKeysMx.Unlock()
 
+	// Get the number of elements in the cache keys slice. This should be the same as the number of items in the cache.
 	c.cacheKeysMx.RLock()
 	lenCacheKeys := len(c.cacheKeys)
 	c.cacheKeysMx.RUnlock()
 
+	// IF the cache is full, remove the oldest item from the cache and from the slice of cache keys.
 	if lenCacheKeys > c.MaxCacheSize {
 		c.cacheMx.Lock()
 		c.cacheKeysMx.RLock()
@@ -117,43 +127,53 @@ func (c *Client) Put(ctx context.Context, key *datastore.Key, src interface{}) (
 
 // Get data from the datastore or cache. The dst value must be a Struct pointer.
 func (c *Client) Get(ctx context.Context, key *datastore.Key, dst interface{}) error {
+	// Get data from the cache if it's in there.
 	keyStr := key.String()
-
 	c.cacheMx.RLock()
 	cacheDst, cached := c.Cache[keyStr]
 	c.cacheMx.RUnlock()
+
+	// Check if the requested data wasn't found in the cache.
 	if !cached {
+		// Get data from the datastore, and save it in dst.
 		err := c.Parent.Get(ctx, key, dst)
 		if err != nil {
 			return err
 		}
+
+		// Put data into the cache.
 		log.Printf("Cache MISS while running Get(): %+v", dst)
 		c.cacheMx.Lock()
 		c.Cache[keyStr] = dst
 		c.cacheMx.Unlock()
 
+		// Put the datastore key string into the slice of keys.
 		c.cacheKeysMx.Lock()
 		c.cacheKeys = append(c.cacheKeys, keyStr)
 		c.cacheKeysMx.Unlock()
 	} else {
+		// If the requested data was cached, convert it from interface to its correct type.
 		log.Printf("Cache HIT while running Get(): %+v", cacheDst)
 		cVal := reflect.ValueOf(cacheDst)
 		dVal := reflect.ValueOf(dst)
 
+		// Make sure dst is a pointer.
 		if dVal.Kind() != reflect.Ptr {
 			return errors.New("dst has a different type than what's in the cache")
 		}
 
+		// Get the type names.
 		dstName := reflect.TypeOf(dst).String()
 		cDstName := reflect.TypeOf(cacheDst).String()
 
+		// Make sure the data from cache is the same type as dst.
 		if dstName != cDstName {
 			return errors.New("dVal and cVal are not the same struct")
 		}
 
+		// Save data into dst.
 		cVal = cVal.Elem()
 		dVal = dVal.Elem()
-
 		dVal.Set(cVal)
 	}
 
