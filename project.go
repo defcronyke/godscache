@@ -11,7 +11,7 @@ import (
 // This function can then be used to get the project ID, for use with NewClient() or elsewhere.
 // If you want to run the package tests, it is required to set the environment variable to a
 // valid GCP project ID of a project that you control, with an initialized datastore.
-func ProjectID() string {
+func projectID() string {
 	projectID := os.Getenv("GODSCACHE_PROJECT_ID")
 
 	if projectID == "" {
