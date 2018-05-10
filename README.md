@@ -1,6 +1,7 @@
 # Go DS Cache  
   
-[![Build Status](https://travis-ci.org/defcronyke/godscache.svg?branch=master)](https://travis-ci.org/defcronyke/godscache)  
+[![Build Status](https://travis-ci.org/defcronyke/godscache.svg?branch=master)](https://travis-ci.org/defcronyke/godscache)
+[![Coverage Status](https://coveralls.io/repos/github/defcronyke/godscache/badge.svg?branch=master)](https://coveralls.io/github/defcronyke/godscache?branch=master)
 
 An unofficial Google Cloud Platform Go Datastore wrapper that adds caching.  
   
