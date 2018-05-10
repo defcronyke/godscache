@@ -10,7 +10,7 @@ go:
 script:
 - tar zxvf keys.tar.gz
 before_install:
-- openssl aes-256-cbc -K $encrypted_ddd1d904a899_key -iv $encrypted_ddd1d904a899_iv
-  -in keys.tar.gz.enc -out .\\keys.tar.gz -d
+- openssl aes-256-cbc -K $encrypted_3bab0e510ecf_key -iv $encrypted_3bab0e510ecf_iv
+  -in keys.tar.gz.enc -out keys.tar.gz -d
 env:
-- GOOGLE_APPLICATION_CREDENTIALS=.\\service-account-key.json
+- GOOGLE_APPLICATION_CREDENTIALS=service-account-key.json
