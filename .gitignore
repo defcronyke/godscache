@@ -1,2 +1,3 @@
 keys.tar.gz
-encryptKeys.ps1
+encryptKeys.sh
+travisLogin.sh
