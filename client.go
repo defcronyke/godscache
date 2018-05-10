@@ -179,3 +179,40 @@ func (c *Client) Get(ctx context.Context, key *datastore.Key, dst interface{}) e
 
 	return nil
 }
+
+// Delete data from the datastore and cache.
+func (c *Client) Delete(ctx context.Context, key *datastore.Key) error {
+	// Check if the data is cached.
+	keyStr := key.String()
+	c.cacheMx.RLock()
+	_, cached := c.Cache[keyStr]
+	c.cacheMx.RUnlock()
+
+	if cached {
+		// Delete data from cache.
+		c.cacheMx.Lock()
+		delete(c.Cache, keyStr)
+		c.cacheMx.Unlock()
+
+		// Delete key from cache keys slice.
+		c.cacheKeysMx.Lock()
+		for idx, val := range c.cacheKeys {
+			if val == keyStr {
+				if len(c.cacheKeys) > 1 {
+					c.cacheKeys = append(c.cacheKeys[:idx], c.cacheKeys[idx+1:]...)
+				} else {
+					c.cacheKeys = make([]string, 0, c.MaxCacheSize)
+				}
+			}
+		}
+		c.cacheKeysMx.Unlock()
+	}
+
+	// Delete data from datastore.
+	err := c.Parent.Delete(ctx, key)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

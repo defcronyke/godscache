@@ -7,10 +7,9 @@ import (
 	"os"
 )
 
-// Set the environment variable GODSCACHE_PROJECT_ID to your Google Cloud Platform project ID.
-// This function can then be used to get the project ID, for use with NewClient() or elsewhere.
-// If you want to run the package tests, it is required to set the environment variable to a
-// valid GCP project ID of a project that you control, with an initialized datastore.
+// This function is used by the package tests. Before you run the tests, you have to set
+// the GODSCACHE_PROJECT_ID environment variable to a Google Cloud Platform project ID
+// of a project you control that has an initialized Datastore.
 func projectID() string {
 	projectID := os.Getenv("GODSCACHE_PROJECT_ID")
 

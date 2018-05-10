@@ -78,7 +78,7 @@ func TestRun(t *testing.T) {
 	kind := "testRun"
 	key := datastore.IncompleteKey(kind, nil)
 	src := &TestDbData{TestString: "TestRun"}
-	_, err = c.Put(ctx, key, src)
+	key, err = c.Put(ctx, key, src)
 	if err != nil {
 		t.Fatalf("Failed putting test data into database: %v", err)
 	}
@@ -95,6 +95,11 @@ func TestRun(t *testing.T) {
 		}
 		log.Printf("Received test data: %+v", res)
 	}
+
+	err = c.Delete(ctx, key)
+	if err != nil {
+		t.Fatalf("Failed deleting test data from datastore and cache: %v", err)
+	}
 }
 
 func TestRunKeysOnlyCached(t *testing.T) {
@@ -108,7 +113,7 @@ func TestRunKeysOnlyCached(t *testing.T) {
 	kind := "testRun"
 	key := datastore.IncompleteKey(kind, nil)
 	src := &TestDbData{TestString: "TestRunKeysOnlyCached"}
-	_, err = c.Put(ctx, key, src)
+	key, err = c.Put(ctx, key, src)
 	if err != nil {
 		t.Fatalf("Failed putting test data into database: %v", err)
 	}
@@ -143,6 +148,11 @@ func TestRunKeysOnlyCached(t *testing.T) {
 			t.Fatalf("Failed getting cached data. TestString was empty.")
 		}
 	}
+
+	err = c.Delete(ctx, key)
+	if err != nil {
+		t.Fatalf("Failed deleting test data from datastore and cache: %v", err)
+	}
 }
 
 func TestPutSuccess(t *testing.T) {
@@ -161,7 +171,10 @@ func TestPutSuccess(t *testing.T) {
 		t.Fatalf("Failed putting data into database: %v", err)
 	}
 
-	// TODO: Delete test data.
+	err = c.Delete(ctx, key)
+	if err != nil {
+		t.Fatalf("Failed deleting test data from datastore and cache: %v", err)
+	}
 }
 
 func TestPutSuccessCustomMaxCacheSize(t *testing.T) {
@@ -177,12 +190,15 @@ func TestPutSuccessCustomMaxCacheSize(t *testing.T) {
 	key := datastore.IncompleteKey("testPut", nil)
 	src := &TestDbData{TestString: "TestPutSuccessCustomMaxCacheSize"}
 
-	_, err = c.Put(ctx, key, src)
+	key, err = c.Put(ctx, key, src)
 	if err != nil {
 		t.Fatalf("Failed putting data into database: %v", err)
 	}
 
-	// TODO: Delete test data.
+	err = c.Delete(ctx, key)
+	if err != nil {
+		t.Fatalf("Failed deleting test data from datastore and cache: %v", err)
+	}
 }
 
 func TestPutSuccessFullCache(t *testing.T) {
@@ -195,17 +211,28 @@ func TestPutSuccessFullCache(t *testing.T) {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
 
+	keys := make([]*datastore.Key, 0, c.MaxCacheSize)
+
 	for i := 0; i < 4; i++ {
 		key := datastore.IncompleteKey("testPut", nil)
 		src := &TestDbData{TestString: "TestPutSuccessFullCache"}
 
-		_, err = c.Put(ctx, key, src)
+		key, err = c.Put(ctx, key, src)
 		if err != nil {
 			t.Fatalf("Failed putting data into database: %v", err)
 		}
+
+		keys = append(keys, key)
 	}
 
-	// TODO: Delete test data.
+	for _, key := range keys {
+		err = c.Delete(ctx, key)
+		if err != nil {
+			t.Fatalf("Failed deleting test data from datastore and cache: %v", err)
+		}
+	}
+
+	keys = nil
 }
 
 func TestPutFailInvalidSrcType(t *testing.T) {
@@ -218,9 +245,14 @@ func TestPutFailInvalidSrcType(t *testing.T) {
 
 	key := datastore.IncompleteKey("testPut", nil)
 	src := TestDbData{TestString: "TestPutFailInvalidSrcType"}
-	_, err = c.Put(ctx, key, src)
+	key, err = c.Put(ctx, key, src)
 	if err == nil {
 		t.Fatalf("Succeeded putting invalid type into database.")
+
+		err = c.Delete(ctx, key)
+		if err != nil {
+			t.Fatalf("Failed deleting test data from datastore and cache: %v", err)
+		}
 	}
 }
 
@@ -247,7 +279,10 @@ func TestGetSuccessUncached(t *testing.T) {
 		t.Fatalf("Failed getting data from database: %v", err)
 	}
 
-	// TODO: Delete test data.
+	err = c.Delete(ctx, key)
+	if err != nil {
+		t.Fatalf("Failed deleting test data from datastore and cache: %v", err)
+	}
 }
 
 func TestGetSuccessCached(t *testing.T) {
@@ -273,7 +308,10 @@ func TestGetSuccessCached(t *testing.T) {
 		t.Fatalf("Failed getting data from database: %v", err)
 	}
 
-	// TODO: Delete test data.
+	err = c.Delete(ctx, key)
+	if err != nil {
+		t.Fatalf("Failed deleting test data from datastore and cache: %v", err)
+	}
 }
 
 func TestGetFailInvalidDstTypeUncached(t *testing.T) {
@@ -299,7 +337,10 @@ func TestGetFailInvalidDstTypeUncached(t *testing.T) {
 		t.Fatalf("Succeeded getting data from database into an invalid dst type.")
 	}
 
-	// TODO: Delete test data.
+	err = c.Delete(ctx, key)
+	if err != nil {
+		t.Fatalf("Failed deleting test data from datastore and cache: %v", err)
+	}
 }
 
 func TestGetFailInvalidDstTypeCached(t *testing.T) {
@@ -325,7 +366,10 @@ func TestGetFailInvalidDstTypeCached(t *testing.T) {
 		t.Fatalf("Succeeded getting data from database into an invalid dst type.")
 	}
 
-	// TODO: Delete test data.
+	err = c.Delete(ctx, key)
+	if err != nil {
+		t.Fatalf("Failed deleting test data from datastore and cache: %v", err)
+	}
 }
 
 func TestGetFailDifferentDstTypeCached(t *testing.T) {
@@ -351,5 +395,24 @@ func TestGetFailDifferentDstTypeCached(t *testing.T) {
 		t.Fatalf("Succeeded getting data from database into a different dst type.")
 	}
 
-	// TODO: Delete test data.
+	err = c.Delete(ctx, key)
+	if err != nil {
+		t.Fatalf("Failed deleting test data from datastore and cache: %v", err)
+	}
+}
+
+func TestDeleteFailIncompleteKey(t *testing.T) {
+	ctx := context.Background()
+
+	c, err := NewClient(ctx, projectID())
+	if err != nil {
+		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
+	}
+
+	key := datastore.IncompleteKey("testDelete", nil)
+
+	err = c.Delete(ctx, key)
+	if err == nil {
+		t.Fatalf("Succeeded deleting from datastore with incomplete key.")
+	}
 }
