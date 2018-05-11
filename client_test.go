@@ -8,6 +8,7 @@ package godscache
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -770,7 +771,7 @@ func ExampleNewClient() {
 		return
 	}
 
-	log.Printf("Client instantiated with max cache size of %v items.", c.MaxCacheSize)
+	fmt.Printf("Client instantiated with max cache size of %v items.\n", c.MaxCacheSize)
 
 	// Output: Client instantiated with max cache size of 100 items.
 }
