@@ -24,6 +24,7 @@ package godscache
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"reflect"
@@ -37,6 +38,7 @@ import (
 // Client is the main struct for godscache. It holds a regular datastore client in the Parent field, as well as the cache and max cache size.
 type Client struct {
 	Parent       *datastore.Client      // The regular datastore client, which can be used directly if you want to bypass caching.
+	ProjectID    string                 // The Google Cloud Platform project ID.
 	Cache        map[string]interface{} // The application-level cache.
 	MaxCacheSize int                    // Cache size in number of items.
 	cacheKeys    []string               // A slice of all the keys in the cache. Used to determine which entries to evict when the cache is full.
@@ -67,6 +69,7 @@ func NewClient(ctx context.Context, projectID string, opts ...option.ClientOptio
 	// Instantiate a new godscache Client and return a pointer to it.
 	c := &Client{
 		Parent:       dsClient,
+		ProjectID:    projectID,
 		Cache:        make(map[string]interface{}, maxCacheSize),
 		cacheMx:      &sync.RWMutex{},
 		MaxCacheSize: maxCacheSize,
@@ -168,13 +171,93 @@ func (c *Client) Get(ctx context.Context, key *datastore.Key, dst interface{}) e
 
 		// Make sure the data from cache is the same type as dst.
 		if dstName != cDstName {
-			return errors.New("dVal and cVal are not the same struct")
+			return fmt.Errorf("dVal and cVal are not the same struct. dstName: %v : cDstName: %v", dstName, cDstName)
 		}
 
 		// Save data into dst.
 		cVal = cVal.Elem()
 		dVal = dVal.Elem()
 		dVal.Set(cVal)
+	}
+
+	return nil
+}
+
+// GetMulti is for getting multiple values from the datastore or cache.
+// The dst value must be a slice of structs or struct pointers, and not a datastore.PropertyList.
+func (c *Client) GetMulti(ctx context.Context, keys []*datastore.Key, dst interface{}) error {
+	dVal := reflect.ValueOf(dst)
+	dstType := reflect.TypeOf(dst)
+	dstName := dstType.String()
+
+	if dVal.Kind() != reflect.Slice {
+		return errors.New("dst must be a slice of structs or struct pointers")
+	}
+
+	if dstName == "datastore.PropertyList" {
+		return errors.New("dst must not be a datastore.PropertyList")
+	}
+
+	if len(keys) != dVal.Len() {
+		return errors.New("keys and dst must be the same length")
+	}
+
+	uncachedKeys := append([]*datastore.Key(nil), keys...)
+	cachedKeys := make([]*datastore.Key, 0, len(keys))
+	resultsMap := make(map[string]interface{}, len(keys))
+
+	for idx, key := range keys {
+		keyStr := key.String()
+
+		c.cacheMx.RLock()
+		val, cached := c.Cache[keyStr]
+		c.cacheMx.RUnlock()
+
+		if idx >= len(uncachedKeys) {
+			c.cacheMx.RLock()
+			resultsMap[keyStr] = val
+			c.cacheMx.RUnlock()
+			break
+		}
+
+		if cached {
+			if len(uncachedKeys) > 1 {
+				uncachedKeys = append(uncachedKeys[:idx], uncachedKeys[idx+1:]...)
+			}
+
+			cachedKeys = append(cachedKeys, key)
+
+			c.cacheMx.RLock()
+			resultsMap[keyStr] = val
+			c.cacheMx.RUnlock()
+		}
+	}
+
+	if len(uncachedKeys) > 0 {
+		dsResultsSlice := reflect.MakeSlice(dstType, len(uncachedKeys), len(uncachedKeys))
+		dsResults := reflect.New(reflect.TypeOf(dst)).Elem()
+		dsResults.Set(dsResultsSlice)
+
+		err := c.Parent.GetMulti(ctx, uncachedKeys, dsResults.Interface())
+		if err != nil {
+			return err
+		}
+
+		for idx, key := range uncachedKeys {
+			keyStr := key.String()
+			resultsMap[keyStr] = dsResults.Index(idx).Interface()
+		}
+	}
+
+	results := make([]interface{}, 0, len(keys))
+
+	for _, key := range keys {
+		keyStr := key.String()
+		results = append(results, resultsMap[keyStr])
+	}
+
+	for idx, val := range results {
+		dVal.Index(idx).Set(reflect.ValueOf(val))
 	}
 
 	return nil

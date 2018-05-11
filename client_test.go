@@ -294,7 +294,7 @@ func TestGetSuccessCached(t *testing.T) {
 	}
 
 	key := datastore.IncompleteKey("testGet", nil)
-	src := &TestDbData{TestString: "TestGetSuccessUncached"}
+	src := &TestDbData{TestString: "TestGetSuccessCached"}
 
 	// Insert into database with caching.
 	key, err = c.Put(ctx, key, src)
@@ -398,6 +398,335 @@ func TestGetFailDifferentDstTypeCached(t *testing.T) {
 	err = c.Delete(ctx, key)
 	if err != nil {
 		t.Fatalf("Failed deleting test data from datastore and cache: %v", err)
+	}
+}
+
+func TestGetMultiSuccess(t *testing.T) {
+	ctx := context.Background()
+
+	c, err := NewClient(ctx, projectID())
+	if err != nil {
+		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
+	}
+
+	kind := "testGetMulti"
+	str1 := "TestGetMultiSuccess 1"
+	str2 := "TestGetMultiSuccess 2"
+	str3 := "TestGetMultiSuccess 3"
+
+	keys := make([]*datastore.Key, 0, 3)
+	src := &TestDbData{TestString: str1}
+
+	// Insert into database with caching.
+	key := datastore.IncompleteKey(kind, nil)
+	key, err = c.Put(ctx, key, src)
+	if err != nil {
+		t.Fatalf("Failed putting data into database: %v", err)
+	}
+
+	keys = append(keys, key)
+	src = &TestDbData{TestString: str2}
+
+	key = datastore.IncompleteKey(kind, nil)
+	key, err = c.Put(ctx, key, src)
+	if err != nil {
+		t.Fatalf("Failed putting data into database: %v", err)
+	}
+
+	keys = append(keys, key)
+	src = &TestDbData{TestString: str3}
+
+	key = datastore.IncompleteKey(kind, nil)
+	key, err = c.Put(ctx, key, src)
+	if err != nil {
+		t.Fatalf("Failed putting data into database: %v", err)
+	}
+
+	keys = append(keys, key)
+
+	dst := make([]*TestDbData, len(keys))
+
+	err = c.GetMulti(ctx, keys, dst)
+	if err != nil {
+		t.Fatalf("Failed getting data from database: %v", err)
+	}
+
+	if dst[0].TestString == "" || dst[1].TestString == "" || dst[2].TestString == "" {
+		t.Fatalf("dst is empty")
+	}
+
+	if dst[0].TestString != str1 || dst[1].TestString != str2 || dst[2].TestString != str3 {
+		t.Fatalf("dst elements are in the wrong order")
+	}
+
+	for _, key := range keys {
+		err = c.Delete(ctx, key)
+		if err != nil {
+			t.Fatalf("Failed deleting test data from datastore and cache: %v", err)
+		}
+	}
+}
+
+func TestGetMultiSuccessUncached(t *testing.T) {
+	ctx := context.Background()
+
+	c, err := NewClient(ctx, projectID())
+	if err != nil {
+		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
+	}
+
+	kind := "testGetMulti"
+	str1 := "TestGetMultiSuccessUncached 1"
+	str2 := "TestGetMultiSuccessUncached 2"
+	str3 := "TestGetMultiSuccessUncached 3"
+
+	keys := make([]*datastore.Key, 0, 3)
+	src := &TestDbData{TestString: str1}
+
+	// Insert into database without caching.
+	key := datastore.IncompleteKey(kind, nil)
+	key, err = c.Parent.Put(ctx, key, src)
+	if err != nil {
+		t.Fatalf("Failed putting data into database: %v", err)
+	}
+
+	keys = append(keys, key)
+	src = &TestDbData{TestString: str2}
+
+	key = datastore.IncompleteKey(kind, nil)
+	key, err = c.Parent.Put(ctx, key, src)
+	if err != nil {
+		t.Fatalf("Failed putting data into database: %v", err)
+	}
+
+	keys = append(keys, key)
+	src = &TestDbData{TestString: str3}
+
+	key = datastore.IncompleteKey(kind, nil)
+	key, err = c.Parent.Put(ctx, key, src)
+	if err != nil {
+		t.Fatalf("Failed putting data into database: %v", err)
+	}
+
+	keys = append(keys, key)
+
+	dst := make([]*TestDbData, len(keys))
+
+	err = c.GetMulti(ctx, keys, dst)
+	if err != nil {
+		t.Fatalf("Failed getting data from database: %v", err)
+	}
+
+	log.Printf("dst: %+v", dst)
+
+	if dst[0].TestString == "" || dst[1].TestString == "" || dst[2].TestString == "" {
+		t.Fatalf("dst is empty")
+	}
+
+	if dst[0].TestString != str1 || dst[1].TestString != str2 || dst[2].TestString != str3 {
+		t.Fatalf("dst elements are in the wrong order")
+	}
+
+	for _, key := range keys {
+		err = c.Delete(ctx, key)
+		if err != nil {
+			t.Fatalf("Failed deleting test data from datastore and cache: %v", err)
+		}
+	}
+}
+
+func TestGetMultiSuccessCachedAndUncached(t *testing.T) {
+	ctx := context.Background()
+
+	c, err := NewClient(ctx, projectID())
+	if err != nil {
+		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
+	}
+
+	kind := "testGetMulti"
+	str1 := "TestGetMultiSuccessCachedAndUncached 1"
+	str2 := "TestGetMultiSuccessCachedAndUncached 2"
+	str3 := "TestGetMultiSuccessCachedAndUncached 3"
+
+	keys := make([]*datastore.Key, 0, 3)
+	src := &TestDbData{TestString: str1}
+
+	// Insert into database with caching.
+	key := datastore.IncompleteKey(kind, nil)
+	key, err = c.Put(ctx, key, src)
+	if err != nil {
+		t.Fatalf("Failed putting data into database: %v", err)
+	}
+
+	keys = append(keys, key)
+	src = &TestDbData{TestString: str2}
+
+	// Insert into database without caching.
+	key = datastore.IncompleteKey(kind, nil)
+	key, err = c.Parent.Put(ctx, key, src)
+	if err != nil {
+		t.Fatalf("Failed putting data into database: %v", err)
+	}
+
+	keys = append(keys, key)
+	src = &TestDbData{TestString: str3}
+
+	// Insert into database with caching.
+	key = datastore.IncompleteKey(kind, nil)
+	key, err = c.Put(ctx, key, src)
+	if err != nil {
+		t.Fatalf("Failed putting data into database: %v", err)
+	}
+
+	keys = append(keys, key)
+
+	dst := make([]*TestDbData, len(keys))
+
+	err = c.GetMulti(ctx, keys, dst)
+	if err != nil {
+		t.Fatalf("Failed getting data from database: %v", err)
+	}
+
+	log.Printf("dst: %+v", dst)
+
+	if dst[0].TestString == "" || dst[1].TestString == "" || dst[2].TestString == "" {
+		t.Fatalf("dst is empty")
+	}
+
+	if dst[0].TestString != str1 || dst[1].TestString != str2 || dst[2].TestString != str3 {
+		t.Fatalf("dst elements are in the wrong order")
+	}
+
+	for _, key := range keys {
+		err = c.Delete(ctx, key)
+		if err != nil {
+			t.Fatalf("Failed deleting test data from datastore and cache: %v", err)
+		}
+	}
+}
+
+func TestGetMultiFail(t *testing.T) {
+	ctx := context.Background()
+
+	c, err := NewClient(ctx, projectID())
+	if err != nil {
+		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
+	}
+
+	kind := "testGetMulti"
+	str1 := "TestGetMultiFail 1"
+	str2 := "TestGetMultiFail 2"
+	str3 := "TestGetMultiFail 3"
+
+	keys := make([]*datastore.Key, 0, 3)
+	src := &TestDbData{TestString: str1}
+
+	// Insert into database with caching.
+	key := datastore.IncompleteKey(kind, nil)
+	key, err = c.Put(ctx, key, src)
+	if err != nil {
+		t.Fatalf("Failed putting data into database: %v", err)
+	}
+
+	keys = append(keys, key)
+	src = &TestDbData{TestString: str2}
+
+	key = datastore.IncompleteKey(kind, nil)
+	key, err = c.Put(ctx, key, src)
+	if err != nil {
+		t.Fatalf("Failed putting data into database: %v", err)
+	}
+
+	keys = append(keys, key)
+	src = &TestDbData{TestString: str3}
+
+	key = datastore.IncompleteKey(kind, nil)
+	key, err = c.Put(ctx, key, src)
+	if err != nil {
+		t.Fatalf("Failed putting data into database: %v", err)
+	}
+
+	keys = append(keys, key)
+
+	dst := make([]*TestDbData, len(keys))
+
+	err = c.GetMulti(ctx, keys, &dst)
+	if err == nil {
+		t.Fatalf("Succeeded getting data into invalid dst type.")
+	}
+
+	err = c.GetMulti(ctx, keys, datastore.PropertyList{})
+	if err == nil {
+		t.Fatalf("Succeeded getting data into datastore.PropertyList, which shouldn't be allowed.")
+	}
+
+	dst = dst[:len(dst)-1]
+	err = c.GetMulti(ctx, keys, dst)
+	if err == nil {
+		t.Fatalf("Succeeded getting data into dst of incorrect length.")
+	}
+
+	for _, key := range keys {
+		err = c.Delete(ctx, key)
+		if err != nil {
+			t.Fatalf("Failed deleting test data from datastore and cache: %v", err)
+		}
+	}
+}
+
+func TestGetMultiFailDatastoreRequest(t *testing.T) {
+	ctx := context.Background()
+
+	c, err := NewClient(ctx, projectID())
+	if err != nil {
+		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
+	}
+
+	c2, err := NewClient(ctx, "a fake project")
+	if err != nil {
+		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
+	}
+
+	kind := "testGetMulti"
+	str1 := "TestGetMultiFail 1"
+	str2 := "TestGetMultiFail 2"
+	str3 := "TestGetMultiFail 3"
+
+	keys := make([]*datastore.Key, 0, 3)
+	src := &TestDbData{TestString: str1}
+
+	// Insert into database with caching.
+	key := datastore.IncompleteKey(kind, nil)
+	key, err = c.Put(ctx, key, src)
+	if err != nil {
+		t.Fatalf("Failed putting data into database: %v", err)
+	}
+
+	keys = append(keys, key)
+	src = &TestDbData{TestString: str2}
+
+	key = datastore.IncompleteKey(kind, nil)
+	key, err = c.Put(ctx, key, src)
+	if err != nil {
+		t.Fatalf("Failed putting data into database: %v", err)
+	}
+
+	keys = append(keys, key)
+	src = &TestDbData{TestString: str3}
+
+	key = datastore.IncompleteKey(kind, nil)
+	key, err = c.Put(ctx, key, src)
+	if err != nil {
+		t.Fatalf("Failed putting data into database: %v", err)
+	}
+
+	keys = append(keys, key)
+
+	dst := make([]*TestDbData, len(keys))
+
+	err = c2.GetMulti(ctx, keys, dst)
+	if err == nil {
+		t.Fatalf("Succeeded getting data from database from a fake google cloud project.")
 	}
 }
 
