@@ -14,7 +14,6 @@ import (
 
 	"cloud.google.com/go/datastore"
 	"google.golang.org/api/iterator"
-	"google.golang.org/api/option"
 )
 
 type EmptyKind struct{}
@@ -763,12 +762,9 @@ func ExampleNewClient() {
 	// You can leave this out, and it will default to 1000.
 	os.Setenv("GODSCACHE_MAX_CACHE_SIZE", "100")
 
-	// You don't need to add any option arguments if you don't want to.
-	optionalOption1 := option.WithoutAuthentication()
-	optionalOptionN := option.WithoutAuthentication()
-
-	// Instantiate a new godscache client. Put your Google Cloud Platform project ID here.
-	c, err := NewClient(ctx, "YOUR GCP PROJECT ID", optionalOption1, optionalOptionN)
+	// Instantiate a new godscache client.
+	// Replace "godscache" below with your Google Cloud Platform project ID.
+	c, err := NewClient(ctx, "godscache")
 	if err != nil {
 		log.Printf("Error: Faileed creating new godscache client: %v", err)
 		return
