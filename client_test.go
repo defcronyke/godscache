@@ -688,9 +688,9 @@ func TestGetMultiFailDatastoreRequest(t *testing.T) {
 	}
 
 	kind := "testGetMulti"
-	str1 := "TestGetMultiFail 1"
-	str2 := "TestGetMultiFail 2"
-	str3 := "TestGetMultiFail 3"
+	str1 := "TestGetMultiFailDatastoreRequest 1"
+	str2 := "TestGetMultiFailDatastoreRequest 2"
+	str3 := "TestGetMultiFailDatastoreRequest 3"
 
 	keys := make([]*datastore.Key, 0, 3)
 	src := &TestDbData{TestString: str1}
@@ -727,6 +727,13 @@ func TestGetMultiFailDatastoreRequest(t *testing.T) {
 	err = c2.GetMulti(ctx, keys, dst)
 	if err == nil {
 		t.Fatalf("Succeeded getting data from database from a fake google cloud project.")
+	}
+
+	for _, key := range keys {
+		err = c.Delete(ctx, key)
+		if err != nil {
+			t.Fatalf("Failed deleting test data from datastore and cache: %v", err)
+		}
 	}
 }
 
