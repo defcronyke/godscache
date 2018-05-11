@@ -14,6 +14,7 @@ import (
 
 	"cloud.google.com/go/datastore"
 	"google.golang.org/api/iterator"
+	"google.golang.org/api/option"
 )
 
 type EmptyKind struct{}
@@ -25,6 +26,8 @@ type TestDbData struct {
 type TestDbDataDifferent struct {
 	TestString string
 }
+
+// ----- Tests -----
 
 func TestNewClientValidprojectID(t *testing.T) {
 	ctx := context.Background()
@@ -748,3 +751,32 @@ func TestDeleteFailIncompleteKey(t *testing.T) {
 		t.Fatalf("Succeeded deleting from datastore with incomplete key.")
 	}
 }
+
+// ----- End Tests -----
+
+// ----- Examples -----
+
+func ExampleNewClient() {
+	ctx := context.Background()
+
+	// Sets the maximum cache size in number of items.
+	// You can leave this out, and it will default to 1000.
+	os.Setenv("GODSCACHE_MAX_CACHE_SIZE", "100")
+
+	// You don't need to add any option arguments if you don't want to.
+	optionalOption1 := option.WithoutAuthentication()
+	optionalOptionN := option.WithoutAuthentication()
+
+	// Instantiate a new godscache client. Put your Google Cloud Platform project ID here.
+	c, err := NewClient(ctx, "YOUR GCP PROJECT ID", optionalOption1, optionalOptionN)
+	if err != nil {
+		log.Printf("Error: Faileed creating new godscache client: %v", err)
+		return
+	}
+
+	log.Printf("Client instantiated with max cache size of %v items.", c.MaxCacheSize)
+
+	// Output: Client instantiated with max cache size of 100 items.
+}
+
+// ----- End Examples -----
