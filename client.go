@@ -185,11 +185,14 @@ func (c *Client) Get(ctx context.Context, key *datastore.Key, dst interface{}) e
 
 // GetMulti is for getting multiple values from the datastore or cache.
 // The dst value must be a slice of structs or struct pointers, and not a datastore.PropertyList.
+// It must also be the same length as the keys slice.
 func (c *Client) GetMulti(ctx context.Context, keys []*datastore.Key, dst interface{}) error {
+	// Get runtime value of dst.
 	dVal := reflect.ValueOf(dst)
 	dstType := reflect.TypeOf(dst)
 	dstName := dstType.String()
 
+	// Make sure dst is of the coorect type and length.
 	if dVal.Kind() != reflect.Slice {
 		return errors.New("dst must be a slice of structs or struct pointers")
 	}
@@ -202,17 +205,21 @@ func (c *Client) GetMulti(ctx context.Context, keys []*datastore.Key, dst interf
 		return errors.New("keys and dst must be the same length")
 	}
 
+	// Make some new data structures to hold keys and results.
 	uncachedKeys := append([]*datastore.Key(nil), keys...)
 	cachedKeys := make([]*datastore.Key, 0, len(keys))
 	resultsMap := make(map[string]interface{}, len(keys))
 
+	// Loop over all the keys.
 	for idx, key := range keys {
+		// Check if key is in cache. If so, get data from cache.
 		keyStr := key.String()
 
 		c.cacheMx.RLock()
 		val, cached := c.Cache[keyStr]
 		c.cacheMx.RUnlock()
 
+		// Stop looping if we don't have any uncached keys left.
 		if idx >= len(uncachedKeys) {
 			c.cacheMx.RLock()
 			resultsMap[keyStr] = val
@@ -220,6 +227,7 @@ func (c *Client) GetMulti(ctx context.Context, keys []*datastore.Key, dst interf
 			break
 		}
 
+		// If key is in cache, remove it from uncached keys slice and add it to cached keys slice.
 		if cached {
 			if len(uncachedKeys) > 1 {
 				uncachedKeys = append(uncachedKeys[:idx], uncachedKeys[idx+1:]...)
@@ -227,12 +235,14 @@ func (c *Client) GetMulti(ctx context.Context, keys []*datastore.Key, dst interf
 
 			cachedKeys = append(cachedKeys, key)
 
+			// Add the data to the results map, indexed by the string representation of the datastore key.
 			c.cacheMx.RLock()
 			resultsMap[keyStr] = val
 			c.cacheMx.RUnlock()
 		}
 	}
 
+	// If there's still uncached keys in the slice, look use them for a batch datastore lookup.
 	if len(uncachedKeys) > 0 {
 		dsResultsSlice := reflect.MakeSlice(dstType, len(uncachedKeys), len(uncachedKeys))
 		dsResults := reflect.New(reflect.TypeOf(dst)).Elem()
@@ -243,12 +253,14 @@ func (c *Client) GetMulti(ctx context.Context, keys []*datastore.Key, dst interf
 			return err
 		}
 
+		// Add the data to the results map.
 		for idx, key := range uncachedKeys {
 			keyStr := key.String()
 			resultsMap[keyStr] = dsResults.Index(idx).Interface()
 		}
 	}
 
+	// Make a new slice for the final ordered result set.
 	results := make([]interface{}, 0, len(keys))
 
 	for _, key := range keys {
@@ -256,6 +268,7 @@ func (c *Client) GetMulti(ctx context.Context, keys []*datastore.Key, dst interf
 		results = append(results, resultsMap[keyStr])
 	}
 
+	// Copy the ordered results into dst.
 	for idx, val := range results {
 		dVal.Index(idx).Set(reflect.ValueOf(val))
 	}
