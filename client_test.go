@@ -517,8 +517,6 @@ func TestGetMultiSuccessUncached(t *testing.T) {
 		t.Fatalf("Failed getting data from database: %v", err)
 	}
 
-	log.Printf("dst: %+v", dst)
-
 	if dst[0].TestString == "" || dst[1].TestString == "" || dst[2].TestString == "" {
 		t.Fatalf("dst is empty")
 	}
@@ -586,8 +584,6 @@ func TestGetMultiSuccessCachedAndUncached(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed getting data from database: %v", err)
 	}
-
-	log.Printf("dst: %+v", dst)
 
 	if dst[0].TestString == "" || dst[1].TestString == "" || dst[2].TestString == "" {
 		t.Fatalf("dst is empty")

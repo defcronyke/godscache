@@ -96,34 +96,7 @@ func (c *Client) Put(ctx context.Context, key *datastore.Key, src interface{}) (
 		return nil, err
 	}
 
-	// Put data into the cache, indexed by the string representation of the datastore key.
-	keyStr := key.String()
-	c.cacheMx.Lock()
-	c.Cache[keyStr] = src
-	c.cacheMx.Unlock()
-
-	// Put the datastore key string into the slice of cache keys.
-	c.cacheKeysMx.Lock()
-	c.cacheKeys = append(c.cacheKeys, keyStr)
-	c.cacheKeysMx.Unlock()
-
-	// Get the number of elements in the cache keys slice. This should be the same as the number of items in the cache.
-	c.cacheKeysMx.RLock()
-	lenCacheKeys := len(c.cacheKeys)
-	c.cacheKeysMx.RUnlock()
-
-	// IF the cache is full, remove the oldest item from the cache and from the slice of cache keys.
-	if lenCacheKeys > c.MaxCacheSize {
-		c.cacheMx.Lock()
-		c.cacheKeysMx.RLock()
-		delete(c.Cache, c.cacheKeys[0])
-		c.cacheKeysMx.RUnlock()
-		c.cacheMx.Unlock()
-
-		c.cacheKeysMx.Lock()
-		c.cacheKeys = c.cacheKeys[1:]
-		c.cacheKeysMx.Unlock()
-	}
+	c.addToCache(key, src)
 
 	return key, nil
 }
@@ -131,10 +104,7 @@ func (c *Client) Put(ctx context.Context, key *datastore.Key, src interface{}) (
 // Get data from the datastore or cache. The dst value must be a Struct pointer.
 func (c *Client) Get(ctx context.Context, key *datastore.Key, dst interface{}) error {
 	// Get data from the cache if it's in there.
-	keyStr := key.String()
-	c.cacheMx.RLock()
-	cacheDst, cached := c.Cache[keyStr]
-	c.cacheMx.RUnlock()
+	cacheDst, cached := c.getFromCache(key)
 
 	// Check if the requested data wasn't found in the cache.
 	if !cached {
@@ -146,14 +116,7 @@ func (c *Client) Get(ctx context.Context, key *datastore.Key, dst interface{}) e
 
 		// Put data into the cache.
 		log.Printf("Cache MISS while running Get(): %+v", dst)
-		c.cacheMx.Lock()
-		c.Cache[keyStr] = dst
-		c.cacheMx.Unlock()
-
-		// Put the datastore key string into the slice of keys.
-		c.cacheKeysMx.Lock()
-		c.cacheKeys = append(c.cacheKeys, keyStr)
-		c.cacheKeysMx.Unlock()
+		c.addToCache(key, dst)
 	} else {
 		// If the requested data was cached, convert it from interface to its correct type.
 		log.Printf("Cache HIT while running Get(): %+v", cacheDst)
@@ -215,15 +178,11 @@ func (c *Client) GetMulti(ctx context.Context, keys []*datastore.Key, dst interf
 		// Check if key is in cache. If so, get data from cache.
 		keyStr := key.String()
 
-		c.cacheMx.RLock()
-		val, cached := c.Cache[keyStr]
-		c.cacheMx.RUnlock()
+		val, cached := c.getFromCache(key)
 
 		// Stop looping if we don't have any uncached keys left.
 		if idx >= len(uncachedKeys) {
-			c.cacheMx.RLock()
 			resultsMap[keyStr] = val
-			c.cacheMx.RUnlock()
 			break
 		}
 
@@ -236,9 +195,7 @@ func (c *Client) GetMulti(ctx context.Context, keys []*datastore.Key, dst interf
 			cachedKeys = append(cachedKeys, key)
 
 			// Add the data to the results map, indexed by the string representation of the datastore key.
-			c.cacheMx.RLock()
 			resultsMap[keyStr] = val
-			c.cacheMx.RUnlock()
 		}
 	}
 
@@ -253,10 +210,12 @@ func (c *Client) GetMulti(ctx context.Context, keys []*datastore.Key, dst interf
 			return err
 		}
 
-		// Add the data to the results map.
+		// Add the data to the results map, and to the cache.
 		for idx, key := range uncachedKeys {
 			keyStr := key.String()
-			resultsMap[keyStr] = dsResults.Index(idx).Interface()
+			res := dsResults.Index(idx).Interface()
+			resultsMap[keyStr] = res
+			c.addToCache(key, res)
 		}
 	}
 
@@ -279,29 +238,9 @@ func (c *Client) GetMulti(ctx context.Context, keys []*datastore.Key, dst interf
 // Delete data from the datastore and cache.
 func (c *Client) Delete(ctx context.Context, key *datastore.Key) error {
 	// Check if the data is cached.
-	keyStr := key.String()
-	c.cacheMx.RLock()
-	_, cached := c.Cache[keyStr]
-	c.cacheMx.RUnlock()
-
+	_, cached := c.getFromCache(key)
 	if cached {
-		// Delete data from cache.
-		c.cacheMx.Lock()
-		delete(c.Cache, keyStr)
-		c.cacheMx.Unlock()
-
-		// Delete key from cache keys slice.
-		c.cacheKeysMx.Lock()
-		for idx, val := range c.cacheKeys {
-			if val == keyStr {
-				if len(c.cacheKeys) > 1 {
-					c.cacheKeys = append(c.cacheKeys[:idx], c.cacheKeys[idx+1:]...)
-				} else {
-					c.cacheKeys = make([]string, 0, c.MaxCacheSize)
-				}
-			}
-		}
-		c.cacheKeysMx.Unlock()
+		c.deleteFromCache(key)
 	}
 
 	// Delete data from datastore.
@@ -311,4 +250,73 @@ func (c *Client) Delete(ctx context.Context, key *datastore.Key) error {
 	}
 
 	return nil
+}
+
+// Add an item to the cache.
+func (c *Client) addToCache(key *datastore.Key, data interface{}) {
+	// Put data into the cache, indexed by the string representation of the datastore key.
+	keyStr := key.String()
+	c.cacheMx.Lock()
+	c.Cache[keyStr] = data
+	c.cacheMx.Unlock()
+
+	// Put the datastore key string into the slice of cache keys.
+	c.cacheKeysMx.Lock()
+	c.cacheKeys = append(c.cacheKeys, keyStr)
+	c.cacheKeysMx.Unlock()
+
+	c.shrinkCacheIfFull()
+}
+
+// Shrink the cache if it is full, removing the oldest items first.
+// This should be called every time an item is added to the cache.
+func (c *Client) shrinkCacheIfFull() {
+	// Get the number of elements in the cache keys slice. This should be the same as the number of items in the cache.
+	c.cacheKeysMx.RLock()
+	lenCacheKeys := len(c.cacheKeys)
+	c.cacheKeysMx.RUnlock()
+
+	// IF the cache is full, remove the oldest item from the cache and from the slice of cache keys.
+	if lenCacheKeys > c.MaxCacheSize {
+		c.cacheMx.Lock()
+		c.cacheKeysMx.RLock()
+		delete(c.Cache, c.cacheKeys[0])
+		c.cacheKeysMx.RUnlock()
+		c.cacheMx.Unlock()
+
+		c.cacheKeysMx.Lock()
+		c.cacheKeys = c.cacheKeys[1:]
+		c.cacheKeysMx.Unlock()
+	}
+}
+
+// Get data from the cache, if it's in there.
+func (c *Client) getFromCache(key *datastore.Key) (interface{}, bool) {
+	keyStr := key.String()
+	c.cacheMx.RLock()
+	cacheDst, cached := c.Cache[keyStr]
+	c.cacheMx.RUnlock()
+
+	return cacheDst, cached
+}
+
+// Delete data from cache.
+func (c *Client) deleteFromCache(key *datastore.Key) {
+	keyStr := key.String()
+	c.cacheMx.Lock()
+	delete(c.Cache, keyStr)
+	c.cacheMx.Unlock()
+
+	// Delete key from cache keys slice.
+	c.cacheKeysMx.Lock()
+	for idx, val := range c.cacheKeys {
+		if val == keyStr {
+			if len(c.cacheKeys) > 1 {
+				c.cacheKeys = append(c.cacheKeys[:idx], c.cacheKeys[idx+1:]...)
+			} else {
+				c.cacheKeys = make([]string, 0, c.MaxCacheSize)
+			}
+		}
+	}
+	c.cacheKeysMx.Unlock()
 }
