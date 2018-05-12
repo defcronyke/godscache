@@ -1103,37 +1103,37 @@ func ExampleClient_Put() {
 	// directly here instead of calling ProjectID().
 	c, err := NewClient(ctx, ProjectID())
 	if err != nil {
-		log.Printf("godscache.ExampleClientPut: failed creating new godscache client: %v", err)
+		log.Printf("godscache.ExampleClient_Put: failed creating new godscache client: %v", err)
 		return
 	}
 
 	// Create a new incomplete key for a given datastore kind. This key will be complete
 	// and usable for queries after running Put() below.
-	key := datastore.IncompleteKey("exampleClientPut", nil)
+	key := datastore.IncompleteKey("exampleClient_Put", nil)
 
 	// Create test data to put into datastore and cache.
 	val := &TestDbData{
-		TestString: "ExampleClientPut",
+		TestString: "ExampleClient_Put",
 	}
 
 	// Put data into the datastore and cache, and save to key the complete key received from
 	// the datastore.
 	key, err = c.Put(ctx, key, val)
 	if err != nil {
-		log.Printf("godscache.ExampleClientPut: failed putting data into datastore and cache: %v", err)
+		log.Printf("godscache.ExampleClient_Put: failed putting data into datastore and cache: %v", err)
 		return
 	}
 
 	// Delete test data from datastore and cache.
 	err = c.Delete(ctx, key)
 	if err != nil {
-		log.Printf("godscache.ExampleClientPut: failed deleting data from datastore and cache: %v", err)
+		log.Printf("godscache.ExampleClient_Put: failed deleting data from datastore and cache: %v", err)
 		return
 	}
 
-	fmt.Printf("godscache.ExampleClientPut: is key incomplete?: %v\n", key.Incomplete())
+	fmt.Printf("godscache.ExampleClient_Put: is the datastore key incomplete?: %v\n", key.Incomplete())
 
-	// Output: godscache.ExampleClientPut: is key incomplete?: false
+	// Output: godscache.ExampleClient_Put: is the datastore key incomplete?: false
 }
 
 // ----- End Examples -----
