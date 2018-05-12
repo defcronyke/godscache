@@ -699,11 +699,13 @@ func ExampleNewClient() {
 	ctx := context.Background()
 
 	// Set the Google Cloud Project ID to use. It's better to set it on the command line.
+	// This value will be returned by the ProjectID() function below.
 	if os.Getenv("GODSCACHE_PROJECT_ID") == "" {
 		os.Setenv("GODSCACHE_PROJECT_ID", "godscache")
 	}
 
-	// Set the memcached servers that you want to use. It's better to set it on the command line.
+	// Set the memcached servers that you want to use. It's better to set it on the command
+	// line.
 	if os.Getenv("GODSCACHE_MEMCACHED_SERVERS") == "" {
 		os.Setenv("GODSCACHE_MEMCACHED_SERVERS", "35.203.95.85:11211,35.203.77.98:11211")
 	}
