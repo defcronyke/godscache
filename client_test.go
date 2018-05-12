@@ -1057,6 +1057,7 @@ func BenchmarkGetMulti100Datastore(b *testing.B) {
 // ----- Examples -----
 
 func ExampleNewClient() {
+	// Make a new context for running the queries.
 	ctx := context.Background()
 
 	// Set the Google Cloud Project ID to use. It's better to set it on the command line.
@@ -1079,12 +1080,13 @@ func ExampleNewClient() {
 		return
 	}
 
-	fmt.Printf("Client instantiated with %v memcache server(s).\n", len(c.MemcacheServers))
+	fmt.Printf("godscache.ExampleNewClient: client instantiated with %v memcache server(s).\n", len(c.MemcacheServers))
 
-	// Output: Client instantiated with 2 memcache server(s).
+	// Output: godscache.ExampleNewClient: client instantiated with 2 memcache server(s).
 }
 
 func ExampleClient_Put() {
+	// Make a new context for running the queries.
 	ctx := context.Background()
 
 	// Set the Google Cloud Project ID to use. It's better to set it on the command line.
