@@ -5,6 +5,7 @@ package godscache
 
 import (
 	"os"
+	"strings"
 )
 
 // ProjectID is used by the package tests. Before you run the tests, you have to set
@@ -18,4 +19,19 @@ func ProjectID() string {
 	}
 
 	return projectID
+}
+
+// MemcacheServers returns the memcached servers that will be used by the client.
+// Set the environment variable GODSCACHE_MEMCACHED_SERVERS="ip_address1:port,ip_addressN:port"
+// to specify which memcached servers to connect to.
+func MemcacheServers() []string {
+	serverStr := os.Getenv("GODSCACHE_MEMCACHED_SERVERS")
+	if serverStr == "" {
+		return []string{
+			"35.203.95.85:11211",
+			"35.203.77.98:11211",
+		}
+	}
+
+	return strings.Split(serverStr, ",")
 }

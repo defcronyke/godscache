@@ -1,7 +1,7 @@
 // Copyright 2018 Jeremy Carter <Jeremy@JeremyCarter.ca>
 // This file may only be used in accordance with the license in the LICENSE file in this directory.
 
-// This is the whitebox test suite for godscache.Client.
+// This is the test suite for godscache.Client.
 //
 // Set the environment variable GODSCACHE_PROJECT_ID to your Google Cloud Platform project ID before running these tests.
 // It must be set to a valid GCP project ID of a project that you control, with an initialized datastore.
@@ -25,12 +25,12 @@ type TestDbData struct {
 }
 
 type TestDbDataDifferent struct {
-	TestString string
+	TestInt int
 }
 
 // ----- Tests -----
 
-func TestNewClientValidgodscacheProjectID(t *testing.T) {
+func TestNewClientValidProjectID(t *testing.T) {
 	ctx := context.Background()
 
 	_, err := NewClient(ctx, ProjectID())
@@ -51,23 +51,12 @@ func TestNewClientProjectIDEnvVar(t *testing.T) {
 	os.Unsetenv("DATASTORE_PROJECT_ID")
 }
 
-func TestNewClientNogodscacheProjectID(t *testing.T) {
+func TestNewClientNoProjectID(t *testing.T) {
 	ctx := context.Background()
 
 	_, err := NewClient(ctx, "")
 	if err == nil {
 		t.Fatalf("Instantiating new Client struct with no project ID succeeded.")
-	}
-}
-
-func TestNewClientFailCustomMaxCacheSize(t *testing.T) {
-	os.Setenv("GODSCACHE_MAX_CACHE_SIZE", "abc")
-	ctx := context.Background()
-
-	_, err := NewClient(ctx, ProjectID())
-	os.Unsetenv("GODSCACHE_MAX_CACHE_SIZE")
-	if err == nil {
-		t.Fatalf("Instantiating new Client struct with an invalid custom max cache size succeeded.")
 	}
 }
 
@@ -133,7 +122,6 @@ func TestRunKeysOnlyCached(t *testing.T) {
 		}
 		var dst TestDbData
 		c.Get(ctx, key, &dst)
-		log.Printf("Got test data: %+v", dst)
 	}
 
 	q = datastore.NewQuery(kind).Limit(1).KeysOnly()
@@ -147,7 +135,6 @@ func TestRunKeysOnlyCached(t *testing.T) {
 		}
 		var dst TestDbData
 		c.Get(ctx, key, &dst)
-		log.Printf("Got test data: %+v", dst)
 		if dst.TestString == "" {
 			t.Fatalf("Failed getting cached data. TestString was empty.")
 		}
@@ -203,40 +190,6 @@ func TestPutSuccessCustomMaxCacheSize(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed deleting test data from datastore and cache: %v", err)
 	}
-}
-
-func TestPutSuccessFullCache(t *testing.T) {
-	os.Setenv("GODSCACHE_MAX_CACHE_SIZE", "2")
-	ctx := context.Background()
-
-	c, err := NewClient(ctx, ProjectID())
-	os.Unsetenv("GODSCACHE_MAX_CACHE_SIZE")
-	if err != nil {
-		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
-	}
-
-	keys := make([]*datastore.Key, 0, c.MaxCacheSize)
-
-	for i := 0; i < 4; i++ {
-		key := datastore.IncompleteKey("testPut", nil)
-		src := &TestDbData{TestString: "TestPutSuccessFullCache"}
-
-		key, err = c.Put(ctx, key, src)
-		if err != nil {
-			t.Fatalf("Failed putting data into database: %v", err)
-		}
-
-		keys = append(keys, key)
-	}
-
-	for _, key := range keys {
-		err = c.Delete(ctx, key)
-		if err != nil {
-			t.Fatalf("Failed deleting test data from datastore and cache: %v", err)
-		}
-	}
-
-	keys = nil
 }
 
 func TestPutFailInvalidSrcType(t *testing.T) {
@@ -368,35 +321,6 @@ func TestGetFailInvalidDstTypeCached(t *testing.T) {
 	err = c.Get(ctx, key, dst)
 	if err == nil {
 		t.Fatalf("Succeeded getting data from database into an invalid dst type.")
-	}
-
-	err = c.Delete(ctx, key)
-	if err != nil {
-		t.Fatalf("Failed deleting test data from datastore and cache: %v", err)
-	}
-}
-
-func TestGetFailDifferentDstTypeCached(t *testing.T) {
-	ctx := context.Background()
-
-	c, err := NewClient(ctx, ProjectID())
-	if err != nil {
-		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
-	}
-
-	key := datastore.IncompleteKey("testGet", nil)
-	src := &TestDbData{TestString: "TestGetFailInvalidDstType"}
-
-	// Insert into database with caching.
-	key, err = c.Put(ctx, key, src)
-	if err != nil {
-		t.Fatalf("Failed putting data into database: %v", err)
-	}
-
-	var dst TestDbDataDifferent
-	err = c.Get(ctx, key, &dst)
-	if err == nil {
-		t.Fatalf("Succeeded getting data from database into a different dst type.")
 	}
 
 	err = c.Delete(ctx, key)
@@ -737,6 +661,20 @@ func TestGetMultiFailDatastoreRequest(t *testing.T) {
 	}
 }
 
+func TestDeleteFailNilKey(t *testing.T) {
+	ctx := context.Background()
+
+	c, err := NewClient(ctx, ProjectID())
+	if err != nil {
+		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
+	}
+
+	err = c.Delete(ctx, nil)
+	if err == nil {
+		t.Fatalf("Succeeded deleting from datastore with nil key.")
+	}
+}
+
 func TestDeleteFailIncompleteKey(t *testing.T) {
 	ctx := context.Background()
 
@@ -760,21 +698,27 @@ func TestDeleteFailIncompleteKey(t *testing.T) {
 func ExampleNewClient() {
 	ctx := context.Background()
 
-	// Sets the maximum cache size in number of items.
-	// You can leave this out, and it will default to 1000.
-	os.Setenv("GODSCACHE_MAX_CACHE_SIZE", "100")
+	// Set the Google Cloud Project ID to use. It's better to set it on the command line.
+	if os.Getenv("GODSCACHE_PROJECT_ID") == "" {
+		os.Setenv("GODSCACHE_PROJECT_ID", "godscache")
+	}
 
-	// Instantiate a new godscache client.
-	// Replace "godscache" below with your Google Cloud Platform project ID.
-	c, err := NewClient(ctx, "godscache")
+	// Set the memcached servers that you want to use. It's better to set it on the command line.
+	if os.Getenv("GODSCACHE_MEMCACHED_SERVERS") == "" {
+		os.Setenv("GODSCACHE_MEMCACHED_SERVERS", "35.203.95.85:11211,35.203.77.98:11211")
+	}
+
+	// Instantiate a new godscache client. You could also just supply the project ID string
+	// directly here instead of calling ProjectID().
+	c, err := NewClient(ctx, ProjectID())
 	if err != nil {
 		log.Printf("Error: Faileed creating new godscache client: %v", err)
 		return
 	}
 
-	fmt.Printf("Client instantiated with max cache size of %v items.\n", c.MaxCacheSize)
+	fmt.Printf("Client instantiated with %v memcache server(s).\n", len(c.MemcacheServers))
 
-	// Output: Client instantiated with max cache size of 100 items.
+	// Output: Client instantiated with 2 memcache server(s).
 }
 
 // ----- End Examples -----
