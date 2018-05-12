@@ -6,7 +6,7 @@
 [![Gitter chat](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/godscache/Lobby)
 [![Freenode chat](https://img.shields.io/badge/chat-on%20freenode-brightgreen.svg)](https://webchat.freenode.net/?channels=#godscache)
   
-An unofficial Google Cloud Platform Go Datastore wrapper that adds caching.  
+An unofficial Google Cloud Platform Go Datastore wrapper that adds caching using memcached.  
   
 It is intended for use on App Engine Flexible Environment, Compute Engine, or Kubernetes Engine.  
   
