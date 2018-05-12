@@ -7,10 +7,10 @@ import (
 	"os"
 )
 
-// This function is used by the package tests. Before you run the tests, you have to set
+// ProjectID is used by the package tests. Before you run the tests, you have to set
 // the GODSCACHE_PROJECT_ID environment variable to a Google Cloud Platform project ID
 // of a project you control that has an initialized Datastore.
-func projectID() string {
+func ProjectID() string {
 	projectID := os.Getenv("GODSCACHE_PROJECT_ID")
 
 	if projectID == "" {

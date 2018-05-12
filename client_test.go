@@ -1,9 +1,10 @@
 // Copyright 2018 Jeremy Carter <Jeremy@JeremyCarter.ca>
 // This file may only be used in accordance with the license in the LICENSE file in this directory.
 
+// This is the whitebox test suite for godscache.Client.
+//
 // Set the environment variable GODSCACHE_PROJECT_ID to your Google Cloud Platform project ID before running these tests.
 // It must be set to a valid GCP project ID of a project that you control, with an initialized datastore.
-
 package godscache
 
 import (
@@ -29,17 +30,17 @@ type TestDbDataDifferent struct {
 
 // ----- Tests -----
 
-func TestNewClientValidprojectID(t *testing.T) {
+func TestNewClientValidgodscacheProjectID(t *testing.T) {
 	ctx := context.Background()
 
-	_, err := NewClient(ctx, projectID())
+	_, err := NewClient(ctx, ProjectID())
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
 }
 
 func TestNewClientProjectIDEnvVar(t *testing.T) {
-	os.Setenv("DATASTORE_PROJECT_ID", projectID())
+	os.Setenv("DATASTORE_PROJECT_ID", ProjectID())
 
 	ctx := context.Background()
 	_, err := NewClient(ctx, "")
@@ -50,7 +51,7 @@ func TestNewClientProjectIDEnvVar(t *testing.T) {
 	os.Unsetenv("DATASTORE_PROJECT_ID")
 }
 
-func TestNewClientNoprojectID(t *testing.T) {
+func TestNewClientNogodscacheProjectID(t *testing.T) {
 	ctx := context.Background()
 
 	_, err := NewClient(ctx, "")
@@ -63,7 +64,7 @@ func TestNewClientFailCustomMaxCacheSize(t *testing.T) {
 	os.Setenv("GODSCACHE_MAX_CACHE_SIZE", "abc")
 	ctx := context.Background()
 
-	_, err := NewClient(ctx, projectID())
+	_, err := NewClient(ctx, ProjectID())
 	os.Unsetenv("GODSCACHE_MAX_CACHE_SIZE")
 	if err == nil {
 		t.Fatalf("Instantiating new Client struct with an invalid custom max cache size succeeded.")
@@ -73,7 +74,7 @@ func TestNewClientFailCustomMaxCacheSize(t *testing.T) {
 func TestRun(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, projectID())
+	c, err := NewClient(ctx, ProjectID())
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -108,7 +109,7 @@ func TestRun(t *testing.T) {
 func TestRunKeysOnlyCached(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, projectID())
+	c, err := NewClient(ctx, ProjectID())
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -161,7 +162,7 @@ func TestRunKeysOnlyCached(t *testing.T) {
 func TestPutSuccess(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, projectID())
+	c, err := NewClient(ctx, ProjectID())
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -184,7 +185,7 @@ func TestPutSuccessCustomMaxCacheSize(t *testing.T) {
 	os.Setenv("GODSCACHE_MAX_CACHE_SIZE", "10")
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, projectID())
+	c, err := NewClient(ctx, ProjectID())
 	os.Unsetenv("GODSCACHE_MAX_CACHE_SIZE")
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
@@ -208,7 +209,7 @@ func TestPutSuccessFullCache(t *testing.T) {
 	os.Setenv("GODSCACHE_MAX_CACHE_SIZE", "2")
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, projectID())
+	c, err := NewClient(ctx, ProjectID())
 	os.Unsetenv("GODSCACHE_MAX_CACHE_SIZE")
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
@@ -241,7 +242,7 @@ func TestPutSuccessFullCache(t *testing.T) {
 func TestPutFailInvalidSrcType(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, projectID())
+	c, err := NewClient(ctx, ProjectID())
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with an invalid custom max cache size succeeded: %v", err)
 	}
@@ -262,7 +263,7 @@ func TestPutFailInvalidSrcType(t *testing.T) {
 func TestGetSuccessUncached(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, projectID())
+	c, err := NewClient(ctx, ProjectID())
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -291,7 +292,7 @@ func TestGetSuccessUncached(t *testing.T) {
 func TestGetSuccessCached(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, projectID())
+	c, err := NewClient(ctx, ProjectID())
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -320,7 +321,7 @@ func TestGetSuccessCached(t *testing.T) {
 func TestGetFailInvalidDstTypeUncached(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, projectID())
+	c, err := NewClient(ctx, ProjectID())
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -349,7 +350,7 @@ func TestGetFailInvalidDstTypeUncached(t *testing.T) {
 func TestGetFailInvalidDstTypeCached(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, projectID())
+	c, err := NewClient(ctx, ProjectID())
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -378,7 +379,7 @@ func TestGetFailInvalidDstTypeCached(t *testing.T) {
 func TestGetFailDifferentDstTypeCached(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, projectID())
+	c, err := NewClient(ctx, ProjectID())
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -407,7 +408,7 @@ func TestGetFailDifferentDstTypeCached(t *testing.T) {
 func TestGetMultiSuccess(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, projectID())
+	c, err := NewClient(ctx, ProjectID())
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -473,7 +474,7 @@ func TestGetMultiSuccess(t *testing.T) {
 func TestGetMultiSuccessUncached(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, projectID())
+	c, err := NewClient(ctx, ProjectID())
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -539,7 +540,7 @@ func TestGetMultiSuccessUncached(t *testing.T) {
 func TestGetMultiSuccessCachedAndUncached(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, projectID())
+	c, err := NewClient(ctx, ProjectID())
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -607,7 +608,7 @@ func TestGetMultiSuccessCachedAndUncached(t *testing.T) {
 func TestGetMultiFail(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, projectID())
+	c, err := NewClient(ctx, ProjectID())
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -676,7 +677,7 @@ func TestGetMultiFail(t *testing.T) {
 func TestGetMultiFailDatastoreRequest(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, projectID())
+	c, err := NewClient(ctx, ProjectID())
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -739,7 +740,7 @@ func TestGetMultiFailDatastoreRequest(t *testing.T) {
 func TestDeleteFailIncompleteKey(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, projectID())
+	c, err := NewClient(ctx, ProjectID())
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
