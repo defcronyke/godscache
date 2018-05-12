@@ -747,6 +747,36 @@ func BenchmarkPut(b *testing.B) {
 	}
 }
 
+func BenchmarkPutDatastore(b *testing.B) {
+	ctx := context.Background()
+
+	c, err := NewClient(ctx, ProjectID())
+	if err != nil {
+		log.Printf("godscache.BenchmarkPutDatastore: instantiating new Client struct with a valid GCP project ID failed: %v", err)
+		return
+	}
+
+	keys := make([]*datastore.Key, 0)
+
+	for i := 0; i < b.N; i++ {
+		key := datastore.IncompleteKey("benchmarkPut", nil)
+		key, err = c.Parent.Put(ctx, key, &TestDbData{TestString: "BenchmarkPutDatastore"})
+		if err != nil {
+			log.Printf("godscache.BenchmarkPutDatastore: failed putting data into datastore and cache: %v", err)
+			return
+		}
+		keys = append(keys, key)
+	}
+
+	for _, key := range keys {
+		err = c.Parent.Delete(ctx, key)
+		if err != nil {
+			log.Printf("godscache.BenchmarkPutDatastore: failed deleting data from datastore and cache: %v", err)
+			return
+		}
+	}
+}
+
 func BenchmarkGet(b *testing.B) {
 	ctx := context.Background()
 
@@ -789,9 +819,9 @@ func BenchmarkGetDatastore(b *testing.B) {
 	}
 
 	key := datastore.IncompleteKey("benchmarkGet", nil)
-	key, err = c.Parent.Put(ctx, key, &TestDbData{TestString: "BenchmarkGet"})
+	key, err = c.Parent.Put(ctx, key, &TestDbData{TestString: "BenchmarkGetDatastore"})
 	if err != nil {
-		log.Printf("godscache.BenchmarkGet: failed putting data into datastore and cache: %v", err)
+		log.Printf("godscache.BenchmarkGetDatastore: failed putting data into datastore and cache: %v", err)
 		return
 	}
 
@@ -799,14 +829,14 @@ func BenchmarkGetDatastore(b *testing.B) {
 		var val TestDbData
 		err = c.Parent.Get(ctx, key, &val)
 		if err != nil {
-			log.Printf("godscache.BenchmarkGet: failed getting data from datastore or cache: %v", err)
+			log.Printf("godscache.BenchmarkGetDatastore: failed getting data from datastore or cache: %v", err)
 			return
 		}
 	}
 
 	err = c.Parent.Delete(ctx, key)
 	if err != nil {
-		log.Printf("godscache.BenchmarkGet: failed deleting data from datastore and cache: %v", err)
+		log.Printf("godscache.BenchmarkGetDatastore: failed deleting data from datastore and cache: %v", err)
 		return
 	}
 }
