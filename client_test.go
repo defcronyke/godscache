@@ -1075,13 +1075,65 @@ func ExampleNewClient() {
 	// directly here instead of calling ProjectID().
 	c, err := NewClient(ctx, ProjectID())
 	if err != nil {
-		log.Printf("Error: Faileed creating new godscache client: %v", err)
+		log.Printf("godscache.ExampleNewClient: failed creating new godscache client: %v", err)
 		return
 	}
 
 	fmt.Printf("Client instantiated with %v memcache server(s).\n", len(c.MemcacheServers))
 
 	// Output: Client instantiated with 2 memcache server(s).
+}
+
+func ExampleClientPut() {
+	ctx := context.Background()
+
+	// Set the Google Cloud Project ID to use. It's better to set it on the command line.
+	// This value will be returned by the ProjectID() function below.
+	if os.Getenv("GODSCACHE_PROJECT_ID") == "" {
+		os.Setenv("GODSCACHE_PROJECT_ID", "godscache")
+	}
+
+	// Set the memcached servers that you want to use. It's better to set it on the command
+	// line.
+	if os.Getenv("GODSCACHE_MEMCACHED_SERVERS") == "" {
+		os.Setenv("GODSCACHE_MEMCACHED_SERVERS", "35.203.95.85:11211,35.203.77.98:11211")
+	}
+
+	// Instantiate a new godscache client. You could also just supply the project ID string
+	// directly here instead of calling ProjectID().
+	c, err := NewClient(ctx, ProjectID())
+	if err != nil {
+		log.Printf("godscache.ExampleClientPut: failed creating new godscache client: %v", err)
+		return
+	}
+
+	// Create a new incomplete key for a given datastore kind. This key will be complete
+	// and usable for queries after running Put() below.
+	key := datastore.IncompleteKey("exampleClientPut", nil)
+
+	// Create test data to put into datastore and cache.
+	val := &TestDbData{
+		TestString: "ExampleClientPut",
+	}
+
+	// Put data into the datastore and cache, and save to key the complete key received from
+	// the datastore.
+	key, err = c.Put(ctx, key, val)
+	if err != nil {
+		log.Printf("godscache.ExampleClientPut: failed putting data into datastore and cache: %v", err)
+		return
+	}
+
+	// Delete test data from datastore and cache.
+	err = c.Delete(ctx, key)
+	if err != nil {
+		log.Printf("godscache.ExampleClientPut: failed deleting data from datastore and cache: %v", err)
+		return
+	}
+
+	fmt.Printf("godscache.ExampleClientPut: is key incomplete?: %v\n", key.Incomplete())
+
+	// Output: godscache.ExampleClientPut: is key incomplete?: false
 }
 
 // ----- End Examples -----
