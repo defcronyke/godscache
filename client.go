@@ -277,7 +277,7 @@ func (c *Client) addToCache(key *datastore.Key, data interface{}) error {
 	return nil
 }
 
-// Get data from the cache, if it's in there. Retirms true if there is a cache hit,
+// Get data from the cache, if it's in there. Returns true if there is a cache hit,
 // and if so, it populates dst with the data. If there is a cache miss, dst is left
 // untouched.
 func (c *Client) getFromCache(key *datastore.Key, dst interface{}) bool {
@@ -305,28 +305,41 @@ func (c *Client) getFromCache(key *datastore.Key, dst interface{}) bool {
 	return true
 }
 
+// Batch get data from the cache. The dst value must be a slice of pointers to structs,
+// and must be the same length as the keys slice. The dst value will be populated with
+// data if found in the cache, and nil for keys which aren't cached, in the order
+// of the keys slice.
 func (c *Client) getMultiFromCache(keys []*datastore.Key, dst interface{}) error {
+	// Make the key strings slice, for use with memcache's get multi function.
 	keyStrs := make([]string, 0, len(keys))
 	for _, key := range keys {
 		keyStrs = append(keyStrs, key.String())
 	}
 
+	// Batch get the data from memcached.
 	items, err := c.MemcacheClient.GetMulti(keyStrs)
 	if err != nil {
 		return fmt.Errorf("godscache.Client.getMultiFromCache: failed getting multiple items from memcached: %v", err)
 	}
 
+	// Get the runtime value of dst.
 	dVal := reflect.ValueOf(dst)
 
+	// Insert the data into dst. It will skip inserting in positions where data wasn't found
+	// in the cache, leaving those spots nil.
 	for idx, key := range keys {
+		// Check if data is cached, and if so, get it out of the cache.
 		keyStr := key.String()
 		item, cached := items[keyStr]
 		if cached {
+			// Create a new runtime value which can be unmarshalled into.
 			dVal2 := reflect.New(reflect.TypeOf(dst).Elem())
 			err = json.Unmarshal(item.Value, dVal2.Interface())
 			if err != nil {
 				return fmt.Errorf("godscache.Client.getMultiFromCache: failed unmarshaling cached data from JSON: %v", err)
 			}
+
+			// Copy the data into dst.
 			dVal.Index(idx).Set(dVal2.Elem())
 		}
 	}
