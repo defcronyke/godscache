@@ -10,7 +10,7 @@
 // If you're looking for something similar for App Engine Standard, check out the highly recommended
 // nds library: https://godoc.org/github.com/qedus/nds
 //
-// For the offical Google library documentation, go here:
+// For the official Google library documentation, go here:
 // https://godoc.org/cloud.google.com/go/datastore
 //
 // Godscache follows the Google Cloud Datastore client library API very closely, to act as a drop-in
