@@ -28,6 +28,29 @@ type TestDbDataDifferent struct {
 	TestInt int
 }
 
+// ----- Main -----
+
+func TestMain(m *testing.M) {
+	ctx := context.Background()
+
+	c, err := NewClient(ctx, ProjectID())
+	if err != nil {
+		log.Printf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
+		os.Exit(1)
+	}
+
+	err = c.MemcacheClient.DeleteAll()
+	if err != nil {
+		log.Printf("Deleting all data from memcache failed: %v", err)
+		os.Exit(2)
+	}
+
+	res := m.Run()
+	os.Exit(res)
+}
+
+// ----- End Main -----
+
 // ----- Tests -----
 
 func TestNewClientValidProjectID(t *testing.T) {
