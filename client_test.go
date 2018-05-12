@@ -1084,7 +1084,7 @@ func ExampleNewClient() {
 	// Output: Client instantiated with 2 memcache server(s).
 }
 
-func ExampleClientPut() {
+func ExampleClient_Put() {
 	ctx := context.Background()
 
 	// Set the Google Cloud Project ID to use. It's better to set it on the command line.
