@@ -2,6 +2,7 @@
   
 [![Build Status](https://travis-ci.org/defcronyke/godscache.svg?branch=master)](https://travis-ci.org/defcronyke/godscache)
 [![Coverage Status](https://coveralls.io/repos/github/defcronyke/godscache/badge.svg?branch=master&service=github)](https://coveralls.io/github/defcronyke/godscache?branch=master)
+[![Go Report Card](https://goreportcard.com/badge/github.com/defcronyke/godscache)](https://goreportcard.com/report/github.com/defcronyke/godscache)
 [![GoDoc](https://godoc.org/github.com/defcronyke/godscache?status.png)](https://godoc.org/github.com/defcronyke/godscache)
 [![Gitter chat](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/godscache/Lobby)
 [![Freenode chat](https://img.shields.io/badge/chat-on%20freenode-brightgreen.svg)](https://webchat.freenode.net/?channels=#godscache)
