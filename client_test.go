@@ -86,7 +86,6 @@ func TestRun(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed running query: %v", err)
 		}
-		log.Printf("Received test data: %+v", res)
 	}
 
 	err = c.Delete(ctx, key)
@@ -621,7 +620,7 @@ func TestGetMultiFailDatastoreRequest(t *testing.T) {
 
 	// Insert into database with caching.
 	key := datastore.IncompleteKey(kind, nil)
-	key, err = c.Put(ctx, key, src)
+	key, err = c.Parent.Put(ctx, key, src)
 	if err != nil {
 		t.Fatalf("Failed putting data into database: %v", err)
 	}
@@ -630,7 +629,7 @@ func TestGetMultiFailDatastoreRequest(t *testing.T) {
 	src = &TestDbData{TestString: str2}
 
 	key = datastore.IncompleteKey(kind, nil)
-	key, err = c.Put(ctx, key, src)
+	key, err = c.Parent.Put(ctx, key, src)
 	if err != nil {
 		t.Fatalf("Failed putting data into database: %v", err)
 	}
@@ -639,7 +638,7 @@ func TestGetMultiFailDatastoreRequest(t *testing.T) {
 	src = &TestDbData{TestString: str3}
 
 	key = datastore.IncompleteKey(kind, nil)
-	key, err = c.Put(ctx, key, src)
+	key, err = c.Parent.Put(ctx, key, src)
 	if err != nil {
 		t.Fatalf("Failed putting data into database: %v", err)
 	}
@@ -692,6 +691,162 @@ func TestDeleteFailIncompleteKey(t *testing.T) {
 }
 
 // ----- End Tests -----
+
+// ----- Benchmarks -----
+
+func BenchmarkPut(b *testing.B) {
+	ctx := context.Background()
+
+	c, err := NewClient(ctx, ProjectID())
+	if err != nil {
+		log.Printf("godscache.BenchmarkPut: instantiating new Client struct with a valid GCP project ID failed: %v", err)
+		return
+	}
+
+	keys := make([]*datastore.Key, 0)
+
+	for i := 0; i < b.N; i++ {
+		key := datastore.IncompleteKey("benchmarkPut", nil)
+		key, err = c.Put(ctx, key, &TestDbData{TestString: "BenchmarkPut"})
+		if err != nil {
+			log.Printf("godscache.BenchmarkPut: failed putting data into datastore and cache: %v", err)
+			return
+		}
+		keys = append(keys, key)
+	}
+
+	for _, key := range keys {
+		err = c.Delete(ctx, key)
+		if err != nil {
+			log.Printf("godscache.BenchmarkPut: failed deleting data from datastore and cache: %v", err)
+			return
+		}
+	}
+}
+
+func BenchmarkGet(b *testing.B) {
+	ctx := context.Background()
+
+	c, err := NewClient(ctx, ProjectID())
+	if err != nil {
+		log.Printf("godscache.BenchmarkGet: instantiating new Client struct with a valid GCP project ID failed: %v", err)
+		return
+	}
+
+	key := datastore.IncompleteKey("benchmarkGet", nil)
+	key, err = c.Put(ctx, key, &TestDbData{TestString: "BenchmarkGet"})
+	if err != nil {
+		log.Printf("godscache.BenchmarkGet: failed putting data into datastore and cache: %v", err)
+		return
+	}
+
+	for i := 0; i < b.N; i++ {
+		var val TestDbData
+		err = c.Get(ctx, key, &val)
+		if err != nil {
+			log.Printf("godscache.BenchmarkGet: failed getting data from datastore or cache: %v", err)
+			return
+		}
+	}
+
+	err = c.Delete(ctx, key)
+	if err != nil {
+		log.Printf("godscache.BenchmarkGet: failed deleting data from datastore and cache: %v", err)
+		return
+	}
+}
+
+func BenchmarkGetMulti2(b *testing.B) {
+	ctx := context.Background()
+
+	c, err := NewClient(ctx, ProjectID())
+	if err != nil {
+		log.Printf("godscache.BenchmarkGetMulti2: instantiating new Client struct with a valid GCP project ID failed: %v", err)
+		return
+	}
+
+	keys := make([]*datastore.Key, 0, 2)
+
+	key := datastore.IncompleteKey("benchmarkGetMulti", nil)
+	key, err = c.Put(ctx, key, &TestDbData{TestString: "BenchmarkGetMulti2 1"})
+	if err != nil {
+		log.Printf("godscache.BenchmarkGetMulti2: failed putting data into datastore and cache: %v", err)
+		return
+	}
+
+	keys = append(keys, key)
+
+	key = datastore.IncompleteKey("benchmarkGetMulti", nil)
+	key, err = c.Put(ctx, key, &TestDbData{TestString: "BenchmarkGetMulti2 2"})
+	if err != nil {
+		log.Printf("godscache.BenchmarkGetMulti2: failed putting data into datastore and cache: %v", err)
+		return
+	}
+
+	keys = append(keys, key)
+
+	vals := make([]*TestDbData, len(keys))
+
+	for i := 0; i < b.N; i++ {
+		err = c.GetMulti(ctx, keys, vals)
+		if err != nil {
+			log.Printf("godscache.BenchmarkGetMulti2: failed getting data from datastore or cache: %v", err)
+			return
+		}
+	}
+
+	for _, key := range keys {
+		err = c.Delete(ctx, key)
+		if err != nil {
+			log.Printf("godscache.BenchmarkGetMulti2: failed deleting data from datastore and cache: %v", err)
+			return
+		}
+	}
+}
+
+func BenchmarkGetMulti10(b *testing.B) {
+	ctx := context.Background()
+
+	c, err := NewClient(ctx, ProjectID())
+	if err != nil {
+		log.Printf("godscache.BenchmarkGetMulti10: instantiating new Client struct with a valid GCP project ID failed: %v", err)
+		return
+	}
+
+	numItems := 10
+	keys := make([]*datastore.Key, 0, numItems)
+
+	for idx := 0; idx < numItems; idx++ {
+		key := datastore.IncompleteKey("benchmarkGetMulti", nil)
+		key, err = c.Put(ctx, key, &TestDbData{TestString: fmt.Sprintf("BenchmarkGetMulti10 %v", idx+1)})
+		if err != nil {
+			log.Printf("godscache.BenchmarkGetMulti10: failed putting data into datastore and cache: %v", err)
+			return
+		}
+
+		keys = append(keys, key)
+	}
+
+	vals := make([]*TestDbData, len(keys))
+
+	for i := 0; i < b.N; i++ {
+		err = c.GetMulti(ctx, keys, vals)
+		if err != nil {
+			log.Printf("godscache.BenchmarkGetMulti10: failed getting data from datastore or cache: %v", err)
+			return
+		}
+	}
+
+	for _, key := range keys {
+		err = c.Delete(ctx, key)
+		if err != nil {
+			log.Printf("godscache.BenchmarkGetMulti10: failed deleting data from datastore and cache: %v", err)
+			return
+		}
+	}
+}
+
+// ----- End Benchmarks -----
 
 // ----- Examples -----
 

@@ -101,7 +101,10 @@ func (c *Client) Put(ctx context.Context, key *datastore.Key, src interface{}) (
 	}
 
 	// Add data to cache.
-	c.addToCache(key, src)
+	err = c.addToCache(key, src)
+	if err != nil {
+		return nil, fmt.Errorf("godscache.Client.Put: failed adding item to cache: %v", err)
+	}
 
 	return key, nil
 }
@@ -120,10 +123,13 @@ func (c *Client) Get(ctx context.Context, key *datastore.Key, dst interface{}) e
 		}
 
 		// Put data into the cache.
-		log.Printf("godscache.Client.Get: cache MISS: %v", key)
-		c.addToCache(key, dst)
+		// log.Printf("godscache.Client.Get: cache MISS: %v", key)
+		err = c.addToCache(key, dst)
+		if err != nil {
+			return fmt.Errorf("godscache.Client.Get: failed adding item to cache: %v", err)
+		}
 	} else {
-		log.Printf("godscache.Client.Get: cache HIT: %v", key)
+		// log.Printf("godscache.Client.Get: cache HIT: %v", key)
 	}
 
 	return nil
@@ -156,52 +162,37 @@ func (c *Client) GetMulti(ctx context.Context, keys []*datastore.Key, dst interf
 	}
 
 	// Make some new data structures to hold keys and results.
-	uncachedKeys := append([]*datastore.Key(nil), keys...)
-	cachedKeys := make([]*datastore.Key, 0, len(keys))
+	uncachedKeys := make([]*datastore.Key, 0, len(keys))
 	resultsMap := make(map[string]interface{}, len(keys))
 
-	// Loop over all the keys.
+	err := c.getMultiFromCache(keys, dst)
+	if err != nil {
+		return fmt.Errorf("godscache.Client.GetMulti: failed getting multiple items from cache: %v", err)
+	}
+
+	// log.Printf("godscache.Client.GetMulti: got multiple results from cache: %+v", dst)
+
 	for idx, key := range keys {
-		// Check if key is in cache. If so, get data from cache.
-		keyStr := key.String()
-
-		// Make a new empty value of dst's elements' type, which will receive the value from the cache.
-		val := reflect.New(reflect.TypeOf(dst).Elem())
-
-		// Get data from cache, and save it in val.
-		cached := c.getFromCache(key, val.Interface())
-
-		// Stop looping if we don't have any uncached keys left.
-		if idx >= len(uncachedKeys) {
-			// Add data to results map.
-			resultsMap[keyStr] = val.Elem().Interface()
-			break
-		}
-
-		// If key is in cache, remove it from uncached keys slice and add it to cached keys slice.
-		if cached {
-			if len(uncachedKeys) > 1 {
-				// Remove key from list of uncached keys.
-				uncachedKeys = append(uncachedKeys[:idx], uncachedKeys[idx+1:]...)
-			}
-
-			// Add key to list of cached keys.
-			cachedKeys = append(cachedKeys, key)
-
-			// Add the data to the results map, indexed by the string representation of the datastore key.
-			resultsMap[keyStr] = val.Elem().Interface()
+		dVal2 := dVal.Index(idx)
+		if dVal2.IsNil() {
+			uncachedKeys = append(uncachedKeys, key)
+		} else {
+			resultsMap[key.String()] = dVal2.Interface()
 		}
 	}
 
 	// If there's still uncached keys in the slice, use them for a batch datastore lookup.
 	if len(uncachedKeys) > 0 {
+		// log.Printf("godscache.Client.GetMulti: number of cache misses: %v", len(uncachedKeys))
 		// Make a new dynamic slice to hold the uncached results, that's the same length as the
 		// uncached keys slice.
 		dsResultsSlice := reflect.MakeSlice(dstType, len(uncachedKeys), len(uncachedKeys))
 
 		// Make the slice addressable.
-		dsResults := reflect.New(reflect.TypeOf(dst)).Elem()
+		dsResults := reflect.New(dstType).Elem()
 		dsResults.Set(dsResultsSlice)
+
+		// log.Printf("godscache.Client.GetMulti: dsResults type: %v", dsResults.Type().String())
 
 		// Get the uncached data from the datastore.
 		err := c.Parent.GetMulti(ctx, uncachedKeys, dsResults.Interface())
@@ -209,12 +200,23 @@ func (c *Client) GetMulti(ctx context.Context, keys []*datastore.Key, dst interf
 			return fmt.Errorf("godscache.Client.GetMulti: failed getting multiple values from datastore: %v", err)
 		}
 
+		// log.Printf("godscache.Client.GetMulti: dsResults: %+v", dsResults.Interface())
+
 		// Add the data to the results map, and to the cache.
 		for idx, key := range uncachedKeys {
 			keyStr := key.String()
 			res := dsResults.Index(idx).Interface()
+			if res == nil {
+				err := c.Get(ctx, key, res)
+				if err != nil {
+					return fmt.Errorf("godscache.Client.GetMulti: failed getting item from datastore or cache: %v", err)
+				}
+			}
 			resultsMap[keyStr] = res
-			c.addToCache(key, res)
+			err = c.addToCache(key, res)
+			if err != nil {
+				return fmt.Errorf("godscache.Client.GetMulti: failed adding item to cache: %v", err)
+			}
 		}
 	}
 
@@ -223,13 +225,22 @@ func (c *Client) GetMulti(ctx context.Context, keys []*datastore.Key, dst interf
 
 	for _, key := range keys {
 		keyStr := key.String()
-		results = append(results, resultsMap[keyStr])
+		val, ok := resultsMap[keyStr]
+		if !ok {
+			return fmt.Errorf("godscache.Client.GetMulti: expected item not found in results map")
+		}
+		results = append(results, val)
 	}
 
 	// Copy the ordered results into dst.
 	for idx, val := range results {
+		if val == nil {
+			continue
+		}
 		dVal.Index(idx).Set(reflect.ValueOf(val))
 	}
+
+	// log.Printf("godscache.Client.GetMulti: results: %+v", dst)
 
 	return nil
 }
@@ -254,16 +265,22 @@ func (c *Client) Delete(ctx context.Context, key *datastore.Key) error {
 // Add an item to the cache.
 func (c *Client) addToCache(key *datastore.Key, data interface{}) error {
 	// Convert data to JSON bytes.
-	dataBytes, _ := json.Marshal(data)
+	dataBytes, err := json.Marshal(data)
+	if err != nil {
+		return fmt.Errorf("godscache.Client.addToCache: failed marshaling data to JSON: %v", err)
+	}
 
 	// Add JSON bytes to memcached server(s), indexed by the string representation of
 	// the datastore key.
-	c.MemcacheClient.Set(
+	err = c.MemcacheClient.Set(
 		&memcache.Item{
 			Key:   key.String(),
 			Value: dataBytes,
 		},
 	)
+	if err != nil {
+		return fmt.Errorf("godscache.Client.addToCache: failed adding item to cache: %v", err)
+	}
 
 	return nil
 }
@@ -282,11 +299,47 @@ func (c *Client) getFromCache(key *datastore.Key, dst interface{}) bool {
 	if err == memcache.ErrCacheMiss {
 		return false
 	}
+	if err != nil {
+		log.Printf("godscache.Client.getFromCache: failed getting data from memcached: %v", err)
+		return false
+	}
 
 	// Load data into dst.
-	json.Unmarshal(item.Value, dst)
+	err = json.Unmarshal(item.Value, dst)
+	if err != nil {
+		log.Printf("godscache.Client.getFromCache: failed unmarshaling JSON data from cache: %v", err)
+	}
 
 	return true
+}
+
+func (c *Client) getMultiFromCache(keys []*datastore.Key, dst interface{}) error {
+	keyStrs := make([]string, 0, len(keys))
+	for _, key := range keys {
+		keyStrs = append(keyStrs, key.String())
+	}
+
+	items, err := c.MemcacheClient.GetMulti(keyStrs)
+	if err != nil {
+		return fmt.Errorf("godscache.Client.getMultiFromCache: failed getting multiple items from memcached: %v", err)
+	}
+
+	dVal := reflect.ValueOf(dst)
+
+	for idx, key := range keys {
+		keyStr := key.String()
+		item, cached := items[keyStr]
+		if cached {
+			dVal2 := reflect.New(reflect.TypeOf(dst).Elem())
+			err = json.Unmarshal(item.Value, dVal2.Interface())
+			if err != nil {
+				return fmt.Errorf("godscache.Client.getMultiFromCache: failed unmarshaling cached data from JSON: %v", err)
+			}
+			dVal.Index(idx).Set(dVal2.Elem())
+		}
+	}
+
+	return nil
 }
 
 // Delete data from cache.

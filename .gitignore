@@ -2,3 +2,5 @@ keys.tar.gz
 encryptKeys.sh
 travisLogin.sh
 debug.test
+benchmark.ps1
+coverage.out
