@@ -162,7 +162,7 @@ func (c *Client) GetMulti(ctx context.Context, keys []*datastore.Key, dst interf
 	}
 
 	// Make some new data structures to hold keys and results.
-	uncachedKeys := make([]*datastore.Key, 0, len(keys))
+	uncachedKeys := make([]*datastore.Key, 0)
 	resultsMap := make(map[string]interface{}, len(keys))
 
 	// Batch get items from cache.
