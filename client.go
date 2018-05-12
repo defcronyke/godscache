@@ -165,6 +165,7 @@ func (c *Client) GetMulti(ctx context.Context, keys []*datastore.Key, dst interf
 	uncachedKeys := make([]*datastore.Key, 0, len(keys))
 	resultsMap := make(map[string]interface{}, len(keys))
 
+	// Batch get items from cache.
 	err := c.getMultiFromCache(keys, dst)
 	if err != nil {
 		return fmt.Errorf("godscache.Client.GetMulti: failed getting multiple items from cache: %v", err)
@@ -172,18 +173,23 @@ func (c *Client) GetMulti(ctx context.Context, keys []*datastore.Key, dst interf
 
 	// log.Printf("godscache.Client.GetMulti: got multiple results from cache: %+v", dst)
 
+	// For each key.
 	for idx, key := range keys {
+		// Check if we're missing the value because it wasn't in the cache.
 		dVal2 := dVal.Index(idx)
 		if dVal2.IsNil() {
+			// Add the key to the list of uncached keys, so we can use it below to request the Datastore.
 			uncachedKeys = append(uncachedKeys, key)
 		} else {
+			// If the value was in the cache, add it to the results map.
 			resultsMap[key.String()] = dVal2.Interface()
 		}
 	}
 
-	// If there's still uncached keys in the slice, use them for a batch datastore lookup.
+	// If there are any uncached keys, use them for a batch datastore lookup.
 	if len(uncachedKeys) > 0 {
 		// log.Printf("godscache.Client.GetMulti: number of cache misses: %v", len(uncachedKeys))
+
 		// Make a new dynamic slice to hold the uncached results, that's the same length as the
 		// uncached keys slice.
 		dsResultsSlice := reflect.MakeSlice(dstType, len(uncachedKeys), len(uncachedKeys))
@@ -205,14 +211,10 @@ func (c *Client) GetMulti(ctx context.Context, keys []*datastore.Key, dst interf
 		// Add the data to the results map, and to the cache.
 		for idx, key := range uncachedKeys {
 			keyStr := key.String()
+
 			res := dsResults.Index(idx).Interface()
-			if res == nil {
-				err := c.Get(ctx, key, res)
-				if err != nil {
-					return fmt.Errorf("godscache.Client.GetMulti: failed getting item from datastore or cache: %v", err)
-				}
-			}
 			resultsMap[keyStr] = res
+
 			err = c.addToCache(key, res)
 			if err != nil {
 				return fmt.Errorf("godscache.Client.GetMulti: failed adding item to cache: %v", err)
@@ -220,22 +222,12 @@ func (c *Client) GetMulti(ctx context.Context, keys []*datastore.Key, dst interf
 		}
 	}
 
-	// Make a new slice for the final ordered result set.
-	results := make([]interface{}, 0, len(keys))
-
-	for _, key := range keys {
+	// Copy the results to dst in the correct order.
+	for idx, key := range keys {
 		keyStr := key.String()
 		val, ok := resultsMap[keyStr]
 		if !ok {
 			return fmt.Errorf("godscache.Client.GetMulti: expected item not found in results map")
-		}
-		results = append(results, val)
-	}
-
-	// Copy the ordered results into dst.
-	for idx, val := range results {
-		if val == nil {
-			continue
 		}
 		dVal.Index(idx).Set(reflect.ValueOf(val))
 	}

@@ -846,6 +846,48 @@ func BenchmarkGetMulti10(b *testing.B) {
 	}
 }
 
+func BenchmarkGetMulti100(b *testing.B) {
+	ctx := context.Background()
+
+	c, err := NewClient(ctx, ProjectID())
+	if err != nil {
+		log.Printf("godscache.BenchmarkGetMulti100: instantiating new Client struct with a valid GCP project ID failed: %v", err)
+		return
+	}
+
+	numItems := 100
+	keys := make([]*datastore.Key, 0, numItems)
+
+	for idx := 0; idx < numItems; idx++ {
+		key := datastore.IncompleteKey("benchmarkGetMulti", nil)
+		key, err = c.Put(ctx, key, &TestDbData{TestString: fmt.Sprintf("BenchmarkGetMulti100 %v", idx+1)})
+		if err != nil {
+			log.Printf("godscache.BenchmarkGetMulti100: failed putting data into datastore and cache: %v", err)
+			return
+		}
+
+		keys = append(keys, key)
+	}
+
+	vals := make([]*TestDbData, len(keys))
+
+	for i := 0; i < b.N; i++ {
+		err = c.GetMulti(ctx, keys, vals)
+		if err != nil {
+			log.Printf("godscache.BenchmarkGetMulti100: failed getting data from datastore or cache: %v", err)
+			return
+		}
+	}
+
+	for _, key := range keys {
+		err = c.Delete(ctx, key)
+		if err != nil {
+			log.Printf("godscache.BenchmarkGetMulti100: failed deleting data from datastore and cache: %v", err)
+			return
+		}
+	}
+}
+
 // ----- End Benchmarks -----
 
 // ----- Examples -----
