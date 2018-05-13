@@ -1360,4 +1360,73 @@ func ExampleClient_Delete() {
 	// Output: godscache.ExampleClient_Delete: failed getting result from datastore or cache: datastore: no such entity
 }
 
+func ExampleClient_Run() {
+	// Make a new context for running the queries.
+	ctx := context.Background()
+
+	// Instantiate a new godscache client. You could also just supply the project ID string
+	// directly here instead of calling ProjectID().
+	c, err := NewClient(ctx, ProjectID())
+	if err != nil {
+		log.Printf("godscache.ExampleClient_Run: failed creating new godscache client: %v", err)
+		return
+	}
+
+	// Create a new incomplete key for a given datastore kind. This key will be complete
+	// and usable for queries after running Put() below.
+	key := datastore.IncompleteKey("exampleClient_Run", nil)
+
+	// Create test data to put into datastore and cache.
+	val := &TestDbData{
+		TestString: "ExampleClient_Run",
+	}
+
+	// Put data into the datastore and cache, and save to key the complete key received from
+	// the datastore.
+	key, err = c.Put(ctx, key, val)
+	if err != nil {
+		log.Printf("godscache.ExampleClient_Run: failed putting data into datastore and cache: %v", err)
+		return
+	}
+
+	// Make a new KeysOnly query, so we can look up the data with Get() so that it will
+	// get cached.
+	q := datastore.NewQuery("exampleClient_Run").KeysOnly()
+
+	// Run the query and iterate over the results, passing nil to Next() because we only want
+	// the keys.
+	for t := c.Run(ctx, q); ; {
+		// Get the next key.
+		key, err := t.Next(nil)
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			log.Printf("godscache.ExampleClient_Run: failed getting query result: %v", err)
+			return
+		}
+
+		// Create a variable to hold the current result.
+		var result TestDbData
+
+		// Use the key to look up the result in a way which can be cached.
+		err = c.Get(ctx, key, &result)
+		if err != nil {
+			log.Printf("godscache.ExampleClient_Run: failed getting data from datastore or cache: %v", err)
+			return
+		}
+
+		fmt.Printf("godscache.ExampleClient_Run: result: %+v\n", result)
+
+		// Delete test data from datastore and cache.
+		err = c.Delete(ctx, key)
+		if err != nil {
+			log.Printf("godscache.ExampleClient_Run: failed deleting data from datastore and cache: %v", err)
+			return
+		}
+	}
+
+	// Output: godscache.ExampleClient_Run: result: {TestString:ExampleClient_Run}
+}
+
 // ----- End Examples -----
