@@ -1230,4 +1230,53 @@ func ExampleClient_Get() {
 	// Output: godscache.ExampleClient_Get: result: {TestString:ExampleClient_Get}
 }
 
+func ExampleClient_Delete() {
+	// Make a new context for running the queries.
+	ctx := context.Background()
+
+	// Instantiate a new godscache client. You could also just supply the project ID string
+	// directly here instead of calling ProjectID().
+	c, err := NewClient(ctx, ProjectID())
+	if err != nil {
+		log.Printf("godscache.ExampleClient_Delete: failed creating new godscache client: %v", err)
+		return
+	}
+
+	// Create a new incomplete key for a given datastore kind. This key will be complete
+	// and usable for queries after running Put() below.
+	key := datastore.IncompleteKey("exampleClient_Delete", nil)
+
+	// Create test data to put into datastore and cache.
+	val := &TestDbData{
+		TestString: "ExampleClient_Delete",
+	}
+
+	// Put data into the datastore and cache, and save to key the complete key received from
+	// the datastore.
+	key, err = c.Put(ctx, key, val)
+	if err != nil {
+		log.Printf("godscache.ExampleClient_Delete: failed putting data into datastore and cache: %v", err)
+		return
+	}
+
+	// Delete test data from datastore and cache.
+	err = c.Delete(ctx, key)
+	if err != nil {
+		log.Printf("godscache.ExampleClient_Delete: failed deleting data from datastore and cache: %v", err)
+		return
+	}
+
+	// Create a variable which we will save the value to after Get() returns.
+	var result TestDbData
+
+	// Get the value from datastore or cache and save it in result.
+	err = c.Get(ctx, key, &result)
+	if err != nil {
+		fmt.Printf("godscache.ExampleClient_Delete: failed getting result from datastore or cache: %v\n", err)
+		return
+	}
+
+	// Output: godscache.ExampleClient_Delete: failed getting result from datastore or cache: datastore: no such entity
+}
+
 // ----- End Examples -----
