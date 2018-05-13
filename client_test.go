@@ -1230,6 +1230,87 @@ func ExampleClient_Get() {
 	// Output: godscache.ExampleClient_Get: result: {TestString:ExampleClient_Get}
 }
 
+func ExampleClient_GetMulti() {
+	// Make a new context for running the queries.
+	ctx := context.Background()
+
+	// Instantiate a new godscache client. You could also just supply the project ID string
+	// directly here instead of calling ProjectID().
+	c, err := NewClient(ctx, ProjectID())
+	if err != nil {
+		log.Printf("godscache.ExampleClient_GetMulti: failed creating new godscache client: %v", err)
+		return
+	}
+
+	// Allocate a slice to hold two datastore keys.
+	keys := make([]*datastore.Key, 0, 2)
+
+	// Create a new incomplete key for a given datastore kind. This key will be complete
+	// and usable for queries after running Put() below.
+	key := datastore.IncompleteKey("exampleClient_GetMulti", nil)
+
+	// Create test data to put into datastore and cache.
+	val := &TestDbData{
+		TestString: "ExampleClient_GetMulti 1",
+	}
+
+	// Put data into the datastore and cache, and save to key the complete key received from
+	// the datastore.
+	key, err = c.Put(ctx, key, val)
+	if err != nil {
+		log.Printf("godscache.ExampleClient_GetMulti: failed putting data into datastore and cache: %v", err)
+		return
+	}
+
+	// Add complete key to the keys slice, for use with GetMulti() below.
+	keys = append(keys, key)
+
+	// Create a second incomplete key for a given datastore kind. This key will be complete
+	// and usable for queries after running Put() below.
+	key = datastore.IncompleteKey("exampleClient_GetMulti", nil)
+
+	// Create test data to put into datastore and cache.
+	val = &TestDbData{
+		TestString: "ExampleClient_GetMulti 2",
+	}
+
+	// Put data into the datastore and cache, and save to key the complete key received from
+	// the datastore.
+	key, err = c.Put(ctx, key, val)
+	if err != nil {
+		log.Printf("godscache.ExampleClient_GetMulti: failed putting data into datastore and cache: %v", err)
+		return
+	}
+
+	// Add second complete key to the keys slice, for use with GetMulti() below.
+	keys = append(keys, key)
+
+	// Create a variable which we will save the results to after GetMulti() returns.
+	// The results slice needs to be the same length as the keys slice.
+	results := make([]*TestDbData, len(keys))
+
+	// Get the value from datastore or cache and save it in result.
+	err = c.GetMulti(ctx, keys, results)
+	if err != nil {
+		log.Printf("godscache.ExampleClient_GetMulti: failed getting results from datastore or cache: %v", err)
+		return
+	}
+
+	// Go through all the keys, and delete them from datastore and cache.
+	for _, key := range keys {
+		// Delete test data from datastore and cache.
+		err = c.Delete(ctx, key)
+		if err != nil {
+			log.Printf("godscache.ExampleClient_GetMulti: failed deleting data from datastore and cache: %v", err)
+			return
+		}
+	}
+
+	fmt.Printf("godscache.ExampleClient_GetMulti: result1: %+v\n", results[0])
+
+	// Output: godscache.ExampleClient_GetMulti: result1: &{TestString:ExampleClient_GetMulti 1}
+}
+
 func ExampleClient_Delete() {
 	// Make a new context for running the queries.
 	ctx := context.Background()
@@ -1269,7 +1350,7 @@ func ExampleClient_Delete() {
 	// Create a variable which we will save the value to after Get() returns.
 	var result TestDbData
 
-	// Get the value from datastore or cache and save it in result.
+	// Try to get the deleted data from datastore or cache. This will result in an error.
 	err = c.Get(ctx, key, &result)
 	if err != nil {
 		fmt.Printf("godscache.ExampleClient_Delete: failed getting result from datastore or cache: %v\n", err)
