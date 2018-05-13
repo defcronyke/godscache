@@ -1289,7 +1289,7 @@ func ExampleClient_GetMulti() {
 	// The results slice needs to be the same length as the keys slice.
 	results := make([]*TestDbData, len(keys))
 
-	// Get the value from datastore or cache and save it in result.
+	// Get the value from datastore or cache and save it in results.
 	err = c.GetMulti(ctx, keys, results)
 	if err != nil {
 		log.Printf("godscache.ExampleClient_GetMulti: failed getting results from datastore or cache: %v", err)
