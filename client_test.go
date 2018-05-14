@@ -903,10 +903,11 @@ func TestDeleteMultiFail2(t *testing.T) {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
 
+	memcacheServers := os.Getenv("GODSCACHE_MEMCACHED_SERVERS")
 	os.Setenv("GODSCACHE_MEMCACHED_SERVERS", "a fake server address")
 
 	c2, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
-	os.Unsetenv("GODSCACHE_MEMCACHED_SERVERS")
+	os.Setenv("GODSCACHE_MEMCACHED_SERVERS", memcacheServers)
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
