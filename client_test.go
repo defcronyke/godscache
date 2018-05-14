@@ -1775,8 +1775,7 @@ func ExampleClient_DeleteMulti() {
 	keys := make([]*datastore.Key, 0, 2)
 	vals := make([]*TestDbData, 0, 2)
 
-	// Create a new incomplete key for a given datastore kind. This key will be complete
-	// and usable for queries after running PutMulti() below.
+	// Create a new incomplete key for a given datastore kind.
 	key := datastore.IncompleteKey(kind, nil)
 
 	// Create test data to put into datastore and cache.
@@ -1788,11 +1787,10 @@ func ExampleClient_DeleteMulti() {
 	keys = append(keys, key)
 	vals = append(vals, val)
 
-	// Create a new incomplete key for a given datastore kind. This key will be complete
-	// and usable for queries after running PutMulti() below.
+	// Create another incomplete key for a given datastore kind.
 	key = datastore.IncompleteKey(kind, nil)
 
-	// Create test data to put into datastore and cache.
+	// Create another piece of test data to put into datastore and cache.
 	val = &TestDbData{
 		TestString: "ExampleClient_DeleteMulti 2",
 	}
