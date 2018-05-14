@@ -33,15 +33,15 @@ type TestDbDataDifferent struct {
 func TestMain(m *testing.M) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
-		log.Printf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
+		log.Printf("godscache.TestMain: instantiating new Client struct with a valid GCP project ID failed: %v", err)
 		os.Exit(1)
 	}
 
 	err = c.MemcacheClient.DeleteAll()
 	if err != nil {
-		log.Printf("Deleting all data from memcache failed: %v", err)
+		log.Printf("godscache.TestMain: deleting all data from memcache failed: %v", err)
 		os.Exit(2)
 	}
 
@@ -56,14 +56,14 @@ func TestMain(m *testing.M) {
 func TestNewClientValidProjectID(t *testing.T) {
 	ctx := context.Background()
 
-	_, err := NewClient(ctx, ProjectID())
+	_, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
 }
 
 func TestNewClientProjectIDEnvVar(t *testing.T) {
-	os.Setenv("DATASTORE_PROJECT_ID", ProjectID())
+	os.Setenv("DATASTORE_PROJECT_ID", os.Getenv("GODSCACHE_PROJECT_ID"))
 
 	ctx := context.Background()
 	_, err := NewClient(ctx, "")
@@ -86,7 +86,7 @@ func TestNewClientNoProjectID(t *testing.T) {
 func TestRun(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -120,7 +120,7 @@ func TestRun(t *testing.T) {
 func TestRunKeysOnlyCached(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -171,7 +171,7 @@ func TestRunKeysOnlyCached(t *testing.T) {
 func TestPutSuccess(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -193,7 +193,7 @@ func TestPutSuccess(t *testing.T) {
 func TestPutFailInvalidSrcType(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with an invalid custom max cache size succeeded: %v", err)
 	}
@@ -214,9 +214,10 @@ func TestPutFailInvalidSrcType(t *testing.T) {
 func TestPutFailInvalidCacheServer(t *testing.T) {
 	ctx := context.Background()
 
+	memcacheServers := os.Getenv("GODSCACHE_MEMCACHED_SERVERS")
 	os.Setenv("GODSCACHE_MEMCACHED_SERVERS", "an invalid memcached server address")
-	c, err := NewClient(ctx, ProjectID())
-	os.Unsetenv("GODSCACHE_MEMCACHED_SERVERS")
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
+	os.Setenv("GODSCACHE_MEMCACHED_SERVERS", memcacheServers)
 	if err != nil {
 		t.Fatalf("godscache.TestPutFailInvalidCacheServer: instantiating new Client struct with an invalid custom max cache size succeeded: %v", err)
 	}
@@ -239,7 +240,7 @@ func TestPutFailInvalidCacheServer(t *testing.T) {
 func TestPutMultiSuccess2(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		t.Fatalf("godscache.TestPutMultiSuccess2: instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -271,7 +272,7 @@ func TestPutMultiSuccess2(t *testing.T) {
 func TestPutMultiFail2(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		t.Fatalf("godscache.TestPutMultiSuccess2: instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -301,9 +302,10 @@ func TestPutMultiFail2(t *testing.T) {
 func TestPutMultiFailInvalidCacheServers2(t *testing.T) {
 	ctx := context.Background()
 
+	memcacheServers := os.Getenv("GODSCACHE_MEMCACHED_SERVERS")
 	os.Setenv("GODSCACHE_MEMCACHED_SERVERS", "an invalid memcached server address")
-	c, err := NewClient(ctx, ProjectID())
-	os.Unsetenv("GODSCACHE_MEMCACHED_SERVERS")
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
+	os.Setenv("GODSCACHE_MEMCACHED_SERVERS", memcacheServers)
 	if err != nil {
 		t.Fatalf("godscache.TestPutMultiSuccess2: instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -336,7 +338,7 @@ func TestPutMultiFailInvalidCacheServers2(t *testing.T) {
 func TestGetSuccessUncached(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -365,7 +367,7 @@ func TestGetSuccessUncached(t *testing.T) {
 func TestGetSuccessCached(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -394,7 +396,7 @@ func TestGetSuccessCached(t *testing.T) {
 func TestGetFailInvalidDstTypeUncached(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -423,7 +425,7 @@ func TestGetFailInvalidDstTypeUncached(t *testing.T) {
 func TestGetFailInvalidDstTypeCached(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -452,14 +454,15 @@ func TestGetFailInvalidDstTypeCached(t *testing.T) {
 func TestGetFailUncachedInvalidCacheServers(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		t.Fatalf("godscache.TestGetFailUncachedInvalidCacheServers: instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
 
+	memcacheServers := os.Getenv("GODSCACHE_MEMCACHED_SERVERS")
 	os.Setenv("GODSCACHE_MEMCACHED_SERVERS", "an invalid memcached server address")
-	c2, err := NewClient(ctx, ProjectID())
-	os.Unsetenv("GODSCACHE_MEMCACHED_SERVERS")
+	c2, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
+	os.Setenv("GODSCACHE_MEMCACHED_SERVERS", memcacheServers)
 	if err != nil {
 		t.Fatalf("godscache.TestGetFailUncachedInvalidCacheServers: instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -488,7 +491,7 @@ func TestGetFailUncachedInvalidCacheServers(t *testing.T) {
 func TestGetMultiSuccess(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -554,7 +557,7 @@ func TestGetMultiSuccess(t *testing.T) {
 func TestGetMultiSuccessUncached(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -620,7 +623,7 @@ func TestGetMultiSuccessUncached(t *testing.T) {
 func TestGetMultiSuccessCachedAndUncached(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -688,7 +691,7 @@ func TestGetMultiSuccessCachedAndUncached(t *testing.T) {
 func TestGetMultiFail(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -757,7 +760,7 @@ func TestGetMultiFail(t *testing.T) {
 func TestGetMultiFailDatastoreRequest(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -820,7 +823,7 @@ func TestGetMultiFailDatastoreRequest(t *testing.T) {
 func TestDeleteFailNilKey(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -834,7 +837,7 @@ func TestDeleteFailNilKey(t *testing.T) {
 func TestDeleteFailIncompleteKey(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -850,7 +853,7 @@ func TestDeleteFailIncompleteKey(t *testing.T) {
 func TestDeleteMultiSuccess2(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
@@ -895,14 +898,14 @@ func TestDeleteMultiSuccess2(t *testing.T) {
 func TestDeleteMultiFail2(t *testing.T) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
 	}
 
 	os.Setenv("GODSCACHE_MEMCACHED_SERVERS", "a fake server address")
 
-	c2, err := NewClient(ctx, ProjectID())
+	c2, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	os.Unsetenv("GODSCACHE_MEMCACHED_SERVERS")
 	if err != nil {
 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
@@ -957,7 +960,7 @@ func TestDeleteMultiFail2(t *testing.T) {
 func BenchmarkPut(b *testing.B) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		log.Printf("godscache.BenchmarkPut: instantiating new Client struct with a valid GCP project ID failed: %v", err)
 		return
@@ -987,7 +990,7 @@ func BenchmarkPut(b *testing.B) {
 func BenchmarkPutDatastore(b *testing.B) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		log.Printf("godscache.BenchmarkPutDatastore: instantiating new Client struct with a valid GCP project ID failed: %v", err)
 		return
@@ -1017,7 +1020,7 @@ func BenchmarkPutDatastore(b *testing.B) {
 func BenchmarkGet(b *testing.B) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		log.Printf("godscache.BenchmarkGet: instantiating new Client struct with a valid GCP project ID failed: %v", err)
 		return
@@ -1049,7 +1052,7 @@ func BenchmarkGet(b *testing.B) {
 func BenchmarkGetDatastore(b *testing.B) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		log.Printf("godscache.BenchmarkGet: instantiating new Client struct with a valid GCP project ID failed: %v", err)
 		return
@@ -1081,7 +1084,7 @@ func BenchmarkGetDatastore(b *testing.B) {
 func BenchmarkGetMulti2(b *testing.B) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		log.Printf("godscache.BenchmarkGetMulti2: instantiating new Client struct with a valid GCP project ID failed: %v", err)
 		return
@@ -1129,7 +1132,7 @@ func BenchmarkGetMulti2(b *testing.B) {
 func BenchmarkGetMulti2Datastore(b *testing.B) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		log.Printf("godscache.BenchmarkGetMulti2: instantiating new Client struct with a valid GCP project ID failed: %v", err)
 		return
@@ -1177,7 +1180,7 @@ func BenchmarkGetMulti2Datastore(b *testing.B) {
 func BenchmarkGetMulti10(b *testing.B) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		log.Printf("godscache.BenchmarkGetMulti10: instantiating new Client struct with a valid GCP project ID failed: %v", err)
 		return
@@ -1219,7 +1222,7 @@ func BenchmarkGetMulti10(b *testing.B) {
 func BenchmarkGetMulti10Datastore(b *testing.B) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		log.Printf("godscache.BenchmarkGetMulti10: instantiating new Client struct with a valid GCP project ID failed: %v", err)
 		return
@@ -1261,7 +1264,7 @@ func BenchmarkGetMulti10Datastore(b *testing.B) {
 func BenchmarkGetMulti100(b *testing.B) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		log.Printf("godscache.BenchmarkGetMulti100: instantiating new Client struct with a valid GCP project ID failed: %v", err)
 		return
@@ -1303,7 +1306,7 @@ func BenchmarkGetMulti100(b *testing.B) {
 func BenchmarkGetMulti100Datastore(b *testing.B) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		log.Printf("godscache.BenchmarkGetMulti100: instantiating new Client struct with a valid GCP project ID failed: %v", err)
 		return
@@ -1345,7 +1348,7 @@ func BenchmarkGetMulti100Datastore(b *testing.B) {
 func BenchmarkRun1(b *testing.B) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		log.Printf("godscache.BenchmarkRun1: instantiating new Client struct with a valid GCP project ID failed: %v", err)
 		return
@@ -1393,7 +1396,7 @@ func BenchmarkRun1(b *testing.B) {
 func BenchmarkRun1Datastore(b *testing.B) {
 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		log.Printf("godscache.BenchmarkRun1Datastore: instantiating new Client struct with a valid GCP project ID failed: %v", err)
 		return
@@ -1446,12 +1449,6 @@ func ExampleNewClient() {
 	// Make a new context for running the queries.
 	ctx := context.Background()
 
-	// Set the Google Cloud Project ID to use. It's better to set it on the command line.
-	// This value will be returned by the ProjectID() function below.
-	if os.Getenv("GODSCACHE_PROJECT_ID") == "" {
-		os.Setenv("GODSCACHE_PROJECT_ID", "godscache")
-	}
-
 	// Set the memcached servers that you want to use. It's better to set it on the command
 	// line.
 	if os.Getenv("GODSCACHE_MEMCACHED_SERVERS") == "" {
@@ -1459,8 +1456,8 @@ func ExampleNewClient() {
 	}
 
 	// Instantiate a new godscache client. You could also just supply the project ID string
-	// directly here instead of calling ProjectID().
-	c, err := NewClient(ctx, ProjectID())
+	// directly here instead of calling os.Getenv("GODSCACHE_PROJECT_ID").
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		log.Printf("godscache.ExampleNewClient: failed creating new godscache client: %v", err)
 		return
@@ -1476,8 +1473,8 @@ func ExampleClient_Put() {
 	ctx := context.Background()
 
 	// Instantiate a new godscache client. You could also just supply the project ID string
-	// directly here instead of calling ProjectID().
-	c, err := NewClient(ctx, ProjectID())
+	// directly here instead of calling os.Getenv("GODSCACHE_PROJECT_ID").
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		log.Printf("godscache.ExampleClient_Put: failed creating new godscache client: %v", err)
 		return
@@ -1517,8 +1514,8 @@ func ExampleClient_PutMulti() {
 	ctx := context.Background()
 
 	// Instantiate a new godscache client. You could also just supply the project ID string
-	// directly here instead of calling ProjectID().
-	c, err := NewClient(ctx, ProjectID())
+	// directly here instead of calling os.Getenv("GODSCACHE_PROJECT_ID").
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		log.Printf("godscache.ExampleClient_PutMulti: failed creating new godscache client: %v", err)
 		return
@@ -1580,8 +1577,8 @@ func ExampleClient_Get() {
 	ctx := context.Background()
 
 	// Instantiate a new godscache client. You could also just supply the project ID string
-	// directly here instead of calling ProjectID().
-	c, err := NewClient(ctx, ProjectID())
+	// directly here instead of calling os.Getenv("GODSCACHE_PROJECT_ID").
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		log.Printf("godscache.ExampleClient_Get: failed creating new godscache client: %v", err)
 		return
@@ -1631,8 +1628,8 @@ func ExampleClient_GetMulti() {
 	ctx := context.Background()
 
 	// Instantiate a new godscache client. You could also just supply the project ID string
-	// directly here instead of calling ProjectID().
-	c, err := NewClient(ctx, ProjectID())
+	// directly here instead of calling os.Getenv("GODSCACHE_PROJECT_ID").
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		log.Printf("godscache.ExampleClient_GetMulti: failed creating new godscache client: %v", err)
 		return
@@ -1712,8 +1709,8 @@ func ExampleClient_Delete() {
 	ctx := context.Background()
 
 	// Instantiate a new godscache client. You could also just supply the project ID string
-	// directly here instead of calling ProjectID().
-	c, err := NewClient(ctx, ProjectID())
+	// directly here instead of calling os.Getenv("GODSCACHE_PROJECT_ID").
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		log.Printf("godscache.ExampleClient_Delete: failed creating new godscache client: %v", err)
 		return
@@ -1761,8 +1758,8 @@ func ExampleClient_DeleteMulti() {
 	ctx := context.Background()
 
 	// Instantiate a new godscache client. You could also just supply the project ID string
-	// directly here instead of calling ProjectID().
-	c, err := NewClient(ctx, ProjectID())
+	// directly here instead of calling os.Getenv("GODSCACHE_PROJECT_ID").
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		log.Printf("godscache.ExampleClient_DeleteMulti: failed creating new godscache client: %v", err)
 		return
@@ -1832,8 +1829,8 @@ func ExampleClient_Run() {
 	ctx := context.Background()
 
 	// Instantiate a new godscache client. You could also just supply the project ID string
-	// directly here instead of calling ProjectID().
-	c, err := NewClient(ctx, ProjectID())
+	// directly here instead of calling os.Getenv("GODSCACHE_PROJECT_ID").
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
 		log.Printf("godscache.ExampleClient_Run: failed creating new godscache client: %v", err)
 		return
