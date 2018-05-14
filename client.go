@@ -278,7 +278,7 @@ func (c *Client) Delete(ctx context.Context, key *datastore.Key) error {
 	return nil
 }
 
-// DeleteMulti deletes multiple pieces of data to the datastore and cache all at once.
+// DeleteMulti deletes multiple pieces of data from the datastore and cache all at once.
 func (c *Client) DeleteMulti(ctx context.Context, keys []*datastore.Key) error {
 	// Put data into datastore.
 	err := c.Parent.DeleteMulti(ctx, keys)
