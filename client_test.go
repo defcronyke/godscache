@@ -1512,6 +1512,69 @@ func ExampleClient_Put() {
 	// Output: godscache.ExampleClient_Put: is the datastore key incomplete?: false
 }
 
+func ExampleClient_PutMulti() {
+	// Make a new context for running the queries.
+	ctx := context.Background()
+
+	// Instantiate a new godscache client. You could also just supply the project ID string
+	// directly here instead of calling ProjectID().
+	c, err := NewClient(ctx, ProjectID())
+	if err != nil {
+		log.Printf("godscache.ExampleClient_PutMulti: failed creating new godscache client: %v", err)
+		return
+	}
+
+	// Set the kind to use for the queries.
+	kind := "exampleClient_PutMulti"
+
+	// Initialize slices for keys and values, to be used with PutMulti() below.
+	keys := make([]*datastore.Key, 0, 2)
+	vals := make([]*TestDbData, 0, 2)
+
+	// Create a new incomplete key for a given datastore kind.
+	key := datastore.IncompleteKey(kind, nil)
+
+	// Create test data to put into datastore and cache.
+	val := &TestDbData{
+		TestString: "ExampleClient_PutMulti 1",
+	}
+
+	// Add key and data to keys and vals slices.
+	keys = append(keys, key)
+	vals = append(vals, val)
+
+	// Create another incomplete key for a given datastore kind.
+	key = datastore.IncompleteKey(kind, nil)
+
+	// Create test data to put into datastore and cache.
+	val = &TestDbData{
+		TestString: "ExampleClient_PutMulti 2",
+	}
+
+	// Add key and data to keys and vals slices.
+	keys = append(keys, key)
+	vals = append(vals, val)
+
+	// Put data into the datastore and cache, and save to keys the complete keys received from
+	// the datastore.
+	keys, err = c.PutMulti(ctx, keys, vals)
+	if err != nil {
+		log.Printf("godscache.ExampleClient_PutMulti: failed putting data into datastore and cache: %v", err)
+		return
+	}
+
+	// Delete test data from datastore and cache.
+	err = c.DeleteMulti(ctx, keys)
+	if err != nil {
+		log.Printf("godscache.ExampleClient_PutMulti: failed deleting data from datastore and cache: %v", err)
+		return
+	}
+
+	fmt.Printf("godscache.ExampleClient_PutMulti: is the first datastore key incomplete?: %v\n", keys[0].Incomplete())
+
+	// Output: godscache.ExampleClient_PutMulti: is the first datastore key incomplete?: false
+}
+
 func ExampleClient_Get() {
 	// Make a new context for running the queries.
 	ctx := context.Background()
@@ -1691,6 +1754,79 @@ func ExampleClient_Delete() {
 	}
 
 	// Output: godscache.ExampleClient_Delete: failed getting result from datastore or cache: datastore: no such entity
+}
+
+func ExampleClient_DeleteMulti() {
+	// Make a new context for running the queries.
+	ctx := context.Background()
+
+	// Instantiate a new godscache client. You could also just supply the project ID string
+	// directly here instead of calling ProjectID().
+	c, err := NewClient(ctx, ProjectID())
+	if err != nil {
+		log.Printf("godscache.ExampleClient_DeleteMulti: failed creating new godscache client: %v", err)
+		return
+	}
+
+	// Set the entity kind to be used for the queries below.
+	kind := "exampleClient_DeleteMulti"
+
+	// Make new slices to hold keys and values.
+	keys := make([]*datastore.Key, 0, 2)
+	vals := make([]*TestDbData, 0, 2)
+
+	// Create a new incomplete key for a given datastore kind. This key will be complete
+	// and usable for queries after running PutMulti() below.
+	key := datastore.IncompleteKey(kind, nil)
+
+	// Create test data to put into datastore and cache.
+	val := &TestDbData{
+		TestString: "ExampleClient_DeleteMulti 1",
+	}
+
+	// Add key and value to keys and values slices.
+	keys = append(keys, key)
+	vals = append(vals, val)
+
+	// Create a new incomplete key for a given datastore kind. This key will be complete
+	// and usable for queries after running PutMulti() below.
+	key = datastore.IncompleteKey(kind, nil)
+
+	// Create test data to put into datastore and cache.
+	val = &TestDbData{
+		TestString: "ExampleClient_DeleteMulti 2",
+	}
+
+	// Add key and value to keys and values slices.
+	keys = append(keys, key)
+	vals = append(vals, val)
+
+	// Put data into the datastore and cache, and save to keys the complete keys received from
+	// the datastore.
+	keys, err = c.PutMulti(ctx, keys, vals)
+	if err != nil {
+		log.Printf("godscache.ExampleClient_DeleteMulti: failed putting data into datastore and cache: %v", err)
+		return
+	}
+
+	// Delete test data from datastore and cache.
+	err = c.DeleteMulti(ctx, keys)
+	if err != nil {
+		log.Printf("godscache.ExampleClient_DeleteMulti: failed deleting data from datastore and cache: %v", err)
+		return
+	}
+
+	// Create a variable which we will save the values to after GetMulti() returns.
+	results := make([]*TestDbData, len(keys))
+
+	// Try to get the deleted data from datastore or cache. This will result in an error.
+	err = c.GetMulti(ctx, keys, results)
+	if err != nil {
+		fmt.Printf("godscache.ExampleClient_DeleteMulti: failed getting results from datastore or cache: %v\n", err)
+		return
+	}
+
+	// Output: godscache.ExampleClient_DeleteMulti: failed getting results from datastore or cache: godscache.Client.GetMulti: failed getting multiple values from datastore: datastore: no such entity (and 1 other error)
 }
 
 func ExampleClient_Run() {
