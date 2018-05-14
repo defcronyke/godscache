@@ -109,6 +109,30 @@ func (c *Client) Put(ctx context.Context, key *datastore.Key, src interface{}) (
 	return key, nil
 }
 
+// PutMulti adds multiple pieces of data to the datastore and cache all at once.
+// It returns a slice of complete keys.
+func (c *Client) PutMulti(ctx context.Context, keys []*datastore.Key, src interface{}) ([]*datastore.Key, error) {
+	// Put data into datastore.
+	ret, err := c.Parent.PutMulti(ctx, keys, src)
+	if err != nil {
+		return nil, fmt.Errorf("godscache.Client.PutMulti: failed putting multiple entries into datastore: %v", err)
+	}
+
+	// Make a runtime value of the data.
+	sVal := reflect.ValueOf(src)
+
+	// Iterate over all the keys, adding the data to the cache.
+	for idx, key := range keys {
+		// Add data to the cache.
+		err = c.addToCache(key, sVal.Index(idx).Interface())
+		if err != nil {
+			return nil, fmt.Errorf("godscache.Client.PutMulti: failed putting data into cache: %v", err)
+		}
+	}
+
+	return ret, nil
+}
+
 // Get data from the datastore or cache. The dst value must be a Struct pointer.
 func (c *Client) Get(ctx context.Context, key *datastore.Key, dst interface{}) error {
 	// Get data from the cache if it's in there.

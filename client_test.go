@@ -190,29 +190,29 @@ func TestPutSuccess(t *testing.T) {
 	}
 }
 
-func TestPutSuccessCustomMaxCacheSize(t *testing.T) {
-	os.Setenv("GODSCACHE_MAX_CACHE_SIZE", "10")
-	ctx := context.Background()
+// func TestPutSuccessCustomMaxCacheSize(t *testing.T) {
+// 	os.Setenv("GODSCACHE_MAX_CACHE_SIZE", "10")
+// 	ctx := context.Background()
 
-	c, err := NewClient(ctx, ProjectID())
-	os.Unsetenv("GODSCACHE_MAX_CACHE_SIZE")
-	if err != nil {
-		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
-	}
+// 	c, err := NewClient(ctx, ProjectID())
+// 	os.Unsetenv("GODSCACHE_MAX_CACHE_SIZE")
+// 	if err != nil {
+// 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
+// 	}
 
-	key := datastore.IncompleteKey("testPut", nil)
-	src := &TestDbData{TestString: "TestPutSuccessCustomMaxCacheSize"}
+// 	key := datastore.IncompleteKey("testPut", nil)
+// 	src := &TestDbData{TestString: "TestPutSuccessCustomMaxCacheSize"}
 
-	key, err = c.Put(ctx, key, src)
-	if err != nil {
-		t.Fatalf("Failed putting data into database: %v", err)
-	}
+// 	key, err = c.Put(ctx, key, src)
+// 	if err != nil {
+// 		t.Fatalf("Failed putting data into database: %v", err)
+// 	}
 
-	err = c.Delete(ctx, key)
-	if err != nil {
-		t.Fatalf("Failed deleting test data from datastore and cache: %v", err)
-	}
-}
+// 	err = c.Delete(ctx, key)
+// 	if err != nil {
+// 		t.Fatalf("Failed deleting test data from datastore and cache: %v", err)
+// 	}
+// }
 
 func TestPutFailInvalidSrcType(t *testing.T) {
 	ctx := context.Background()
@@ -231,6 +231,68 @@ func TestPutFailInvalidSrcType(t *testing.T) {
 		err = c.Delete(ctx, key)
 		if err != nil {
 			t.Fatalf("Failed deleting test data from datastore and cache: %v", err)
+		}
+	}
+}
+
+func TestPutMultiSuccess2(t *testing.T) {
+	ctx := context.Background()
+
+	c, err := NewClient(ctx, ProjectID())
+	if err != nil {
+		t.Fatalf("godscache.TestPutMultiSuccess2: instantiating new Client struct with a valid GCP project ID failed: %v", err)
+	}
+
+	keys := make([]*datastore.Key, 0, 2)
+	src := make([]*TestDbData, 0, 2)
+
+	key := datastore.IncompleteKey("testPutMulti", nil)
+	keys = append(keys, key)
+	src = append(src, &TestDbData{TestString: "TestPutMultiSuccess2 1"})
+
+	key = datastore.IncompleteKey("testPutMulti", nil)
+	keys = append(keys, key)
+	src = append(src, &TestDbData{TestString: "TestPutMultiSuccess2 2"})
+
+	keys, err = c.PutMulti(ctx, keys, src)
+	if err != nil {
+		t.Fatalf("godscache.TestPutMultiSuccess2: failed batch putting data into database: %v", err)
+	}
+
+	for _, key := range keys {
+		err = c.Delete(ctx, key)
+		if err != nil {
+			t.Fatalf("godscache.TestPutMultiSuccess2: failed deleting test data from datastore and cache: %v", err)
+		}
+	}
+}
+
+func TestPutMultiFail2(t *testing.T) {
+	ctx := context.Background()
+
+	c, err := NewClient(ctx, ProjectID())
+	if err != nil {
+		t.Fatalf("godscache.TestPutMultiSuccess2: instantiating new Client struct with a valid GCP project ID failed: %v", err)
+	}
+
+	keys := make([]*datastore.Key, 0, 2)
+	src := make([]*TestDbData, 0, 2)
+
+	key := datastore.IncompleteKey("testPutMulti", nil)
+	keys = append(keys, key)
+
+	key = datastore.IncompleteKey("testPutMulti", nil)
+	keys = append(keys, key)
+
+	keys, err = c.PutMulti(ctx, keys, src)
+	if err == nil {
+		t.Fatalf("godscache.TestPutMultiSuccess2: succeeded batch putting data with invalid length into database: %v", err)
+	}
+
+	for _, key := range keys {
+		err = c.Delete(ctx, key)
+		if err != nil {
+			t.Fatalf("godscache.TestPutMultiSuccess2: failed deleting test data from datastore and cache: %v", err)
 		}
 	}
 }
