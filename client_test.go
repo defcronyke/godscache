@@ -1179,7 +1179,7 @@ func BenchmarkRun1(b *testing.B) {
 	kind := "benchmarkRun"
 
 	key := datastore.IncompleteKey(kind, nil)
-	key, err = c.Put(ctx, key, &TestDbData{TestString: "BenchmarkRun1"})
+	_, err = c.Put(ctx, key, &TestDbData{TestString: "BenchmarkRun1"})
 	if err != nil {
 		log.Printf("godscache.BenchmarkRun1: failed putting data into datastore and cache: %v", err)
 		return
@@ -1227,7 +1227,7 @@ func BenchmarkRun1Datastore(b *testing.B) {
 	kind := "benchmarkRun1Datastore"
 
 	key := datastore.IncompleteKey(kind, nil)
-	key, err = c.Parent.Put(ctx, key, &TestDbData{TestString: "BenchmarkRun1Datastore"})
+	_, err = c.Parent.Put(ctx, key, &TestDbData{TestString: "BenchmarkRun1Datastore"})
 	if err != nil {
 		log.Printf("godscache.BenchmarkRun1Datastore: failed putting data into datastore and cache: %v", err)
 		return
@@ -1541,7 +1541,7 @@ func ExampleClient_Run() {
 
 	// Put data into the datastore and cache, and save to key the complete key received from
 	// the datastore.
-	key, err = c.Put(ctx, key, val)
+	_, err = c.Put(ctx, key, val)
 	if err != nil {
 		log.Printf("godscache.ExampleClient_Run: failed putting data into datastore and cache: %v", err)
 		return
