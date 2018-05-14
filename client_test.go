@@ -190,30 +190,6 @@ func TestPutSuccess(t *testing.T) {
 	}
 }
 
-// func TestPutSuccessCustomMaxCacheSize(t *testing.T) {
-// 	os.Setenv("GODSCACHE_MAX_CACHE_SIZE", "10")
-// 	ctx := context.Background()
-
-// 	c, err := NewClient(ctx, ProjectID())
-// 	os.Unsetenv("GODSCACHE_MAX_CACHE_SIZE")
-// 	if err != nil {
-// 		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
-// 	}
-
-// 	key := datastore.IncompleteKey("testPut", nil)
-// 	src := &TestDbData{TestString: "TestPutSuccessCustomMaxCacheSize"}
-
-// 	key, err = c.Put(ctx, key, src)
-// 	if err != nil {
-// 		t.Fatalf("Failed putting data into database: %v", err)
-// 	}
-
-// 	err = c.Delete(ctx, key)
-// 	if err != nil {
-// 		t.Fatalf("Failed deleting test data from datastore and cache: %v", err)
-// 	}
-// }
-
 func TestPutFailInvalidSrcType(t *testing.T) {
 	ctx := context.Background()
 
@@ -231,6 +207,31 @@ func TestPutFailInvalidSrcType(t *testing.T) {
 		err = c.Delete(ctx, key)
 		if err != nil {
 			t.Fatalf("Failed deleting test data from datastore and cache: %v", err)
+		}
+	}
+}
+
+func TestPutFailInvalidCacheServer(t *testing.T) {
+	ctx := context.Background()
+
+	os.Setenv("GODSCACHE_MEMCACHED_SERVERS", "an invalid memcached server address")
+	c, err := NewClient(ctx, ProjectID())
+	os.Unsetenv("GODSCACHE_MEMCACHED_SERVERS")
+	if err != nil {
+		t.Fatalf("godscache.TestPutFailInvalidCacheServer: instantiating new Client struct with an invalid custom max cache size succeeded: %v", err)
+	}
+
+	key := datastore.IncompleteKey("testPut", nil)
+
+	src := &TestDbData{TestString: "TestPutFailInvalidCacheServer"}
+
+	key, err = c.Put(ctx, key, src)
+	if err == nil {
+		t.Fatalf("godscache.TestPutFailInvalidCacheServer: Succeeded putting data into cache using invalid cache servers.")
+
+		err = c.Delete(ctx, key)
+		if err != nil {
+			t.Fatalf("godscache.TestPutFailInvalidCacheServer: failed deleting test data from datastore and cache: %v", err)
 		}
 	}
 }
@@ -286,7 +287,42 @@ func TestPutMultiFail2(t *testing.T) {
 
 	keys, err = c.PutMulti(ctx, keys, src)
 	if err == nil {
-		t.Fatalf("godscache.TestPutMultiSuccess2: succeeded batch putting data with invalid length into database: %v", err)
+		t.Fatalf("godscache.TestPutMultiSuccess2: succeeded batch putting data with invalid length into database.")
+	}
+
+	for _, key := range keys {
+		err = c.Delete(ctx, key)
+		if err != nil {
+			t.Fatalf("godscache.TestPutMultiSuccess2: failed deleting test data from datastore and cache: %v", err)
+		}
+	}
+}
+
+func TestPutMultiFailInvalidCacheServers2(t *testing.T) {
+	ctx := context.Background()
+
+	os.Setenv("GODSCACHE_MEMCACHED_SERVERS", "an invalid memcached server address")
+	c, err := NewClient(ctx, ProjectID())
+	os.Unsetenv("GODSCACHE_MEMCACHED_SERVERS")
+	if err != nil {
+		t.Fatalf("godscache.TestPutMultiSuccess2: instantiating new Client struct with a valid GCP project ID failed: %v", err)
+	}
+
+	keys := make([]*datastore.Key, 0, 2)
+	src := make([]*TestDbData, 0, 2)
+
+	key := datastore.IncompleteKey("testPutMulti", nil)
+	keys = append(keys, key)
+
+	key = datastore.IncompleteKey("testPutMulti", nil)
+	keys = append(keys, key)
+
+	src = append(src, &TestDbData{TestString: "TestPutMultiSuccess2 1"})
+	src = append(src, &TestDbData{TestString: "TestPutMultiSuccess2 2"})
+
+	keys, err = c.PutMulti(ctx, keys, src)
+	if err == nil {
+		t.Fatalf("godscache.TestPutMultiSuccess2: succeeded batch putting data into cache with invalid cache servers.")
 	}
 
 	for _, key := range keys {
@@ -410,6 +446,42 @@ func TestGetFailInvalidDstTypeCached(t *testing.T) {
 	err = c.Delete(ctx, key)
 	if err != nil {
 		t.Fatalf("Failed deleting test data from datastore and cache: %v", err)
+	}
+}
+
+func TestGetFailUncachedInvalidCacheServers(t *testing.T) {
+	ctx := context.Background()
+
+	c, err := NewClient(ctx, ProjectID())
+	if err != nil {
+		t.Fatalf("godscache.TestGetFailUncachedInvalidCacheServers: instantiating new Client struct with a valid GCP project ID failed: %v", err)
+	}
+
+	os.Setenv("GODSCACHE_MEMCACHED_SERVERS", "an invalid memcached server address")
+	c2, err := NewClient(ctx, ProjectID())
+	os.Unsetenv("GODSCACHE_MEMCACHED_SERVERS")
+	if err != nil {
+		t.Fatalf("godscache.TestGetFailUncachedInvalidCacheServers: instantiating new Client struct with a valid GCP project ID failed: %v", err)
+	}
+
+	key := datastore.IncompleteKey("testGet", nil)
+	src := &TestDbData{TestString: "TestGetFailUncachedInvalidCacheServers"}
+
+	// Insert into database with caching.
+	key, err = c.Parent.Put(ctx, key, src)
+	if err != nil {
+		t.Fatalf("godscache.TestGetFailUncachedInvalidCacheServers: failed putting data into database: %v", err)
+	}
+
+	var dst TestDbData
+	err = c2.Get(ctx, key, dst)
+	if err == nil {
+		t.Fatalf("godscache.TestGetFailUncachedInvalidCacheServers: succeeded getting data from cache using invalid cache server.")
+	}
+
+	err = c.Delete(ctx, key)
+	if err != nil {
+		t.Fatalf("godscache.TestGetFailUncachedInvalidCacheServers: failed deleting test data from datastore and cache: %v", err)
 	}
 }
 
@@ -772,6 +844,109 @@ func TestDeleteFailIncompleteKey(t *testing.T) {
 	err = c.Delete(ctx, key)
 	if err == nil {
 		t.Fatalf("Succeeded deleting from datastore with incomplete key.")
+	}
+}
+
+func TestDeleteMultiSuccess2(t *testing.T) {
+	ctx := context.Background()
+
+	c, err := NewClient(ctx, ProjectID())
+	if err != nil {
+		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
+	}
+
+	keys := make([]*datastore.Key, 0, 2)
+
+	key := datastore.IncompleteKey("testDeleteMulti", nil)
+
+	src := &TestDbData{TestString: "TestDeleteMultiSuccess1 1"}
+
+	key, err = c.Put(ctx, key, src)
+	if err != nil {
+		t.Fatalf("godscache.DeleteMultiSuccess2: failed putting data into datastore and cache: %v", err)
+	}
+
+	keys = append(keys, key)
+
+	key = datastore.IncompleteKey("testDeleteMulti", nil)
+
+	src = &TestDbData{TestString: "TestDeleteMultiSuccess1 2"}
+
+	key, err = c.Put(ctx, key, src)
+	if err != nil {
+		t.Fatalf("godscache.DeleteMultiSuccess2: failed putting data into datastore and cache: %v", err)
+	}
+
+	keys = append(keys, key)
+
+	err = c.DeleteMulti(ctx, keys)
+	if err != nil {
+		t.Fatalf("godscache.DeleteMultiSuccess2: failed deleting multiple items from datastore: %v", err)
+	}
+
+	dst := make([]*TestDbData, len(keys))
+
+	err = c.GetMulti(ctx, keys, &dst)
+	if err == nil {
+		t.Fatalf("godscache.DeleteMultiSuccess2: succeeded getting multiple items from datastore and cache, which were already deleted.")
+	}
+}
+
+func TestDeleteMultiFail2(t *testing.T) {
+	ctx := context.Background()
+
+	c, err := NewClient(ctx, ProjectID())
+	if err != nil {
+		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
+	}
+
+	os.Setenv("GODSCACHE_MEMCACHED_SERVERS", "a fake server address")
+
+	c2, err := NewClient(ctx, ProjectID())
+	os.Unsetenv("GODSCACHE_MEMCACHED_SERVERS")
+	if err != nil {
+		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
+	}
+
+	keys := make([]*datastore.Key, 0, 2)
+
+	key := datastore.IncompleteKey("testDeleteMulti", nil)
+
+	src := &TestDbData{TestString: "TestDeleteMultiFail1 1"}
+
+	key, err = c.Put(ctx, key, src)
+	if err != nil {
+		t.Fatalf("godscache.DeleteMultiFail2: failed putting data into datastore and cache: %v", err)
+	}
+
+	keys = append(keys, key)
+
+	key = datastore.IncompleteKey("testDeleteMulti", nil)
+
+	src = &TestDbData{TestString: "TestDeleteMultiFail1 2"}
+
+	key, err = c.Put(ctx, key, src)
+	if err != nil {
+		t.Fatalf("godscache.DeleteMultiFail2: failed putting data into datastore and cache: %v", err)
+	}
+
+	keys = append(keys, key)
+
+	err = c2.DeleteMulti(ctx, keys)
+	if err == nil {
+		t.Fatalf("godscache.DeleteMultiFail2: succeeded deleting multiple items from datastore and cache, with invalid cache servers.")
+	}
+
+	err = c.DeleteMulti(ctx, keys)
+	if err != nil {
+		t.Fatalf("godscache.DeleteMultiFail2: failed deleting multiple items from datastore and cache: %v", err)
+	}
+
+	dst := make([]*TestDbData, len(keys))
+
+	err = c.GetMulti(ctx, keys, &dst)
+	if err == nil {
+		t.Fatalf("godscache.DeleteMultiFail2: succeeded getting multiple items from datastore and cache, which were already deleted.")
 	}
 }
 

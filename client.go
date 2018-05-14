@@ -278,6 +278,26 @@ func (c *Client) Delete(ctx context.Context, key *datastore.Key) error {
 	return nil
 }
 
+// DeleteMulti deletes multiple pieces of data to the datastore and cache all at once.
+func (c *Client) DeleteMulti(ctx context.Context, keys []*datastore.Key) error {
+	// Put data into datastore.
+	err := c.Parent.DeleteMulti(ctx, keys)
+	if err != nil {
+		return fmt.Errorf("godscache.Client.DeleteMulti: failed deleting multiple entries from datastore: %v", err)
+	}
+
+	// Iterate over all the keys, deleting the data from the cache.
+	for _, key := range keys {
+		// Delete data from the cache.
+		err = c.deleteFromCache(key)
+		if err != nil {
+			return fmt.Errorf("godscache.Client.DeleteMulti: failed deleting data from cache: %v", err)
+		}
+	}
+
+	return nil
+}
+
 // Add an item to the cache.
 func (c *Client) addToCache(key *datastore.Key, data interface{}) error {
 	// Convert data to JSON bytes.
