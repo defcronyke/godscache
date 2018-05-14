@@ -1105,6 +1105,102 @@ func BenchmarkGetMulti100Datastore(b *testing.B) {
 	}
 }
 
+func BenchmarkRun1(b *testing.B) {
+	ctx := context.Background()
+
+	c, err := NewClient(ctx, ProjectID())
+	if err != nil {
+		log.Printf("godscache.BenchmarkRun1: instantiating new Client struct with a valid GCP project ID failed: %v", err)
+		return
+	}
+
+	kind := "benchmarkRun"
+
+	key := datastore.IncompleteKey(kind, nil)
+	key, err = c.Put(ctx, key, &TestDbData{TestString: "BenchmarkRun1"})
+	if err != nil {
+		log.Printf("godscache.BenchmarkRun1: failed putting data into datastore and cache: %v", err)
+		return
+	}
+
+	for i := 0; i < b.N; i++ {
+		q := datastore.NewQuery(kind).KeysOnly()
+
+		for t := c.Run(ctx, q); ; {
+			key, err := t.Next(nil)
+			if err == iterator.Done {
+				break
+			}
+			if err != nil {
+				log.Printf("godscache.BenchmarkRun1: failed getting query result: %v", err)
+				return
+			}
+
+			var result TestDbData
+
+			err = c.Get(ctx, key, &result)
+			if err != nil {
+				log.Printf("godscache.BenchmarkRun1: failed getting data from datastore or cache: %v", err)
+				return
+			}
+
+			err = c.Delete(ctx, key)
+			if err != nil {
+				log.Printf("godscache.BenchmarkRun1: failed deleting data from datastore and cache: %v", err)
+				return
+			}
+		}
+	}
+}
+
+func BenchmarkRun1Datastore(b *testing.B) {
+	ctx := context.Background()
+
+	c, err := NewClient(ctx, ProjectID())
+	if err != nil {
+		log.Printf("godscache.BenchmarkRun1Datastore: instantiating new Client struct with a valid GCP project ID failed: %v", err)
+		return
+	}
+
+	kind := "benchmarkRun1Datastore"
+
+	key := datastore.IncompleteKey(kind, nil)
+	key, err = c.Parent.Put(ctx, key, &TestDbData{TestString: "BenchmarkRun1Datastore"})
+	if err != nil {
+		log.Printf("godscache.BenchmarkRun1Datastore: failed putting data into datastore and cache: %v", err)
+		return
+	}
+
+	for i := 0; i < b.N; i++ {
+		q := datastore.NewQuery(kind).KeysOnly()
+
+		for t := c.Parent.Run(ctx, q); ; {
+			key, err := t.Next(nil)
+			if err == iterator.Done {
+				break
+			}
+			if err != nil {
+				log.Printf("godscache.BenchmarkRun1Datastore: failed getting query result: %v", err)
+				return
+			}
+
+			var result TestDbData
+
+			err = c.Parent.Get(ctx, key, &result)
+			if err != nil {
+				log.Printf("godscache.BenchmarkRun1Datastore: failed getting data from datastore or cache: %v", err)
+				return
+			}
+
+			err = c.Parent.Delete(ctx, key)
+			if err != nil {
+				log.Printf("godscache.BenchmarkRun1Datastore: failed deleting data from datastore and cache: %v", err)
+				return
+			}
+		}
+	}
+}
+
 // ----- End Benchmarks -----
 
 // ----- Examples -----
