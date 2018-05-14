@@ -1891,6 +1891,9 @@ func ExampleClient_Run() {
 			log.Printf("godscache.ExampleClient_Run: failed deleting data from datastore and cache: %v", err)
 			return
 		}
+
+		// For this example, we only care about the first result.
+		break
 	}
 
 	// Output: godscache.ExampleClient_Run: result: {TestString:ExampleClient_Run}
