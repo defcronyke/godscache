@@ -201,7 +201,7 @@ func (c *Client) GetMulti(ctx context.Context, keys []*datastore.Key, dst interf
 	for idx, key := range keys {
 		// Check if we're missing the value because it wasn't in the cache.
 		dVal2 := dVal.Index(idx)
-		if dVal2.Kind() == reflect.Ptr && dVal2.IsNil() {
+		if (dVal2.Kind() == reflect.Ptr && dVal2.IsNil()) || dVal2.Kind() == reflect.Struct {
 			// Add the key to the list of uncached keys, so we can use it below to request the Datastore.
 			uncachedKeys = append(uncachedKeys, key)
 		} else {
