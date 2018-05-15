@@ -32,6 +32,7 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"time"
 
 	"cloud.google.com/go/datastore"
 	"github.com/bradfitz/gomemcache/memcache"
@@ -71,6 +72,7 @@ func NewClient(ctx context.Context, projectID string, opts ...option.ClientOptio
 
 	// Create memcache client.
 	memcacheClient := memcache.New(memcacheServers...)
+	memcacheClient.Timeout = time.Second * 10
 
 	// Instantiate a new godscache Client and return a pointer to it.
 	c := &Client{
