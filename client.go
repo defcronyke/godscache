@@ -73,6 +73,7 @@ func NewClient(ctx context.Context, projectID string, opts ...option.ClientOptio
 	// Create memcache client.
 	memcacheClient := memcache.New(memcacheServers...)
 	memcacheClient.Timeout = time.Second * 10
+	memcacheClient.MaxIdleConns = 100
 
 	// Instantiate a new godscache Client and return a pointer to it.
 	c := &Client{
