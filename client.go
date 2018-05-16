@@ -58,7 +58,7 @@ type Client struct {
 // NewClient is a constructor for making a new godscache client. Start here. It makes a datastore
 // client and stores it in the Parent field, and it makes a memcache client. Set the context with
 // a ctxKeyMemcacheServers("godscacheMemcachedServers") key, with a value of
-// []string{"ip_address1:port,ip_addressN:port"}, to specify which memcached servers to connect
+// []string{"ip_address1:port", "ip_addressN:port"}, to specify which memcached servers to connect
 // to. Alternately you can set the environment variable
 // GODSCACHE_MEMCACHED_SERVERS="ip_address1:port,ip_addressN:port" instead to specify
 // the memcached servers. The context value will take priority over the environment

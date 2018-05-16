@@ -16,7 +16,7 @@ type CtxKeyMemcacheServers string
 
 // memcacheServers returns the memcached servers that will be used by the client.
 // Set the context with a ctxKeyMemcacheServers("memcachedServers") key,
-// with a value of []string{"ip_address1:port,ip_addressN:port"}, to specify which
+// with a value of []string{"ip_address1:port", "ip_addressN:port"}, to specify which
 // memcached servers to connect to. Alternately you can set the environment variable
 // GODSCACHE_MEMCACHED_SERVERS="ip_address1:port,ip_addressN:port" instead to specify
 // the memcached servers. The context value will take priority over the environment
