@@ -4,14 +4,35 @@
 package godscache
 
 import (
+	"context"
 	"os"
+	"reflect"
 	"strings"
 )
 
+// CtxKeyMemcacheServers is a type for the context key "godscacheMemcachedServers",
+// used to specify which memcached servers to connect to.
+type CtxKeyMemcacheServers string
+
 // MemcacheServers returns the memcached servers that will be used by the client.
-// Set the environment variable GODSCACHE_MEMCACHED_SERVERS="ip_address1:port,ip_addressN:port"
-// to specify which memcached servers to connect to.
-func MemcacheServers() []string {
+// Set the context with a ctxKeyMemcacheServers("godscacheMemcachedServers") key,
+// with a value of []string{"ip_address1:port,ip_addressN:port"}, to specify which
+// memcached servers to connect to. Alternately you can set the environment variable
+// GODSCACHE_MEMCACHED_SERVERS="ip_address1:port,ip_addressN:port" instead to specify
+// the memcached servers. The context value will take priority over the environment
+// variables if both are present.
+func MemcacheServers(ctx context.Context) []string {
+	// Check if the memcached servers are specified in the context. If so, use them.
+	ctxMemcachedServers := reflect.ValueOf(ctx.Value(CtxKeyMemcacheServers("godscacheMemcachedServers")))
+	if ctxMemcachedServers.Kind() == reflect.Slice && ctxMemcachedServers.Len() > 0 {
+		val, ok := ctxMemcachedServers.Interface().([]string)
+		if ok {
+			return val
+		}
+	}
+
+	// If the memcached servers aren't specified in the context, get them from the
+	// environment variable.
 	serverStr := os.Getenv("GODSCACHE_MEMCACHED_SERVERS")
 	if serverStr == "" {
 		return nil
