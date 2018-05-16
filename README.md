@@ -9,6 +9,6 @@
   
 An unofficial Google Cloud Platform Go Datastore wrapper that adds caching using memcached.  
   
-For App Engine Flexible, Compute Engine, or Kubernetes Engine, and more.  
+For App Engine Flexible, Compute Engine, Kubernetes Engine, and more.  
   
 Documentation is here: [https://godoc.org/github.com/defcronyke/godscache](https://godoc.org/github.com/defcronyke/godscache)  
