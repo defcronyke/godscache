@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"testing"
 
 	"cloud.google.com/go/datastore"
@@ -84,12 +85,9 @@ func TestNewClientNoProjectID(t *testing.T) {
 }
 
 func TestNewClientMemcachedContext(t *testing.T) {
-	memcacheServers := []string{
-		"35.203.95.85:11211",
-		"35.203.77.98:11211",
-	}
+	memcacheServers := strings.Split(os.Getenv("GODSCACHE_MEMCACHED_SERVERS"), ",")
 
-	ctx := context.WithValue(context.Background(), CtxKeyMemcacheServers("godscacheMemcachedServers"), memcacheServers)
+	ctx := context.WithValue(context.Background(), CtxKeyMemcacheServers("memcachedServers"), memcacheServers)
 
 	_, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
@@ -1477,11 +1475,11 @@ func ExampleNewClient() {
 	// Make a new context for running the queries.
 	ctx := context.Background()
 
-	// Provide the memcached server addresses in the context, or in the GODSCACHE_MEMCACHED_SERVERS
-	// Environment variable.
+	// Provide the memcached server addresses in the context, or in the
+	// GODSCACHE_MEMCACHED_SERVERS environment variable.
 	//
 	// memcacheServers := []string{"ip_address1:port", "ip_addressN:port"}
-	// ctx = context.WithValue(ctx, CtxKeyMemcacheServers("godscacheMemcachedServers"), memcacheServers)
+	// ctx = context.WithValue(ctx, CtxKeyMemcacheServers("memcachedServers"), memcacheServers)
 
 	// Instantiate a new godscache client. You could also just supply the project ID string
 	// directly here instead of calling os.Getenv("GODSCACHE_PROJECT_ID").

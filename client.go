@@ -39,8 +39,8 @@ import (
 	"google.golang.org/api/option"
 )
 
-// Client is the main struct for godscache. It holds a regular datastore client in the Parent field,
-// as well as the memcache client.
+// Client is the main struct for godscache. It holds a regular datastore client in the
+// Parent field, as well as the memcache client.
 type Client struct {
 	// The raw Datastore client, which can be used directly if you want to bypass caching.
 	Parent *datastore.Client
@@ -71,7 +71,7 @@ func NewClient(ctx context.Context, projectID string, opts ...option.ClientOptio
 	}
 
 	// Get the list of memcached servers to connect to.
-	memcacheServers := MemcacheServers(ctx)
+	memcacheServers := memcacheServers(ctx)
 
 	// Create memcache client.
 	memcacheClient := memcache.New(memcacheServers...)
