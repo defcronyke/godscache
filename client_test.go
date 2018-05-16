@@ -87,7 +87,7 @@ func TestNewClientNoProjectID(t *testing.T) {
 func TestNewClientMemcachedContext(t *testing.T) {
 	memcacheServers := strings.Split(os.Getenv("GODSCACHE_MEMCACHED_SERVERS"), ",")
 
-	ctx := context.WithValue(context.Background(), CtxKeyMemcacheServers("memcachedServers"), memcacheServers)
+	ctx := context.WithValue(context.Background(), MemcacheServerKey, memcacheServers)
 
 	_, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
 	if err != nil {
@@ -1479,7 +1479,7 @@ func ExampleNewClient() {
 	// GODSCACHE_MEMCACHED_SERVERS environment variable.
 	//
 	// memcacheServers := []string{"ip_address1:port", "ip_addressN:port"}
-	// ctx = context.WithValue(ctx, CtxKeyMemcacheServers("memcachedServers"), memcacheServers)
+	// ctx = context.WithValue(ctx, MemcacheServerKey, memcacheServers)
 
 	// Instantiate a new godscache client. You could also just supply the project ID string
 	// directly here instead of calling os.Getenv("GODSCACHE_PROJECT_ID").
