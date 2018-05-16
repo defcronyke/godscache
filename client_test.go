@@ -1491,7 +1491,7 @@ func ExampleNewClient() {
 
 	fmt.Printf("godscache.ExampleNewClient: client instantiated with %v memcache server(s).\n", len(c.MemcacheServers))
 
-	// Output: godscache.ExampleNewClient: client instantiated with 2 memcache server(s).
+	// Output: godscache.ExampleNewClient: client instantiated with 1 memcache server(s).
 }
 
 func ExampleClient_Put() {
