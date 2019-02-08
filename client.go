@@ -74,9 +74,13 @@ func NewClient(ctx context.Context, projectID string, opts ...option.ClientOptio
 	memcacheServers := memcacheServers(ctx)
 
 	// Create memcache client.
-	memcacheClient := memcache.New(memcacheServers...)
-	memcacheClient.Timeout = time.Second * 10
-	memcacheClient.MaxIdleConns = 100
+	var memcacheClient *memcache.Client
+
+	if memcacheServers != nil {
+		memcacheClient = memcache.New(memcacheServers...)
+		memcacheClient.Timeout = time.Second * 10
+		memcacheClient.MaxIdleConns = 100
+	}
 
 	// Instantiate a new godscache Client and return a pointer to it.
 	c := &Client{
@@ -269,6 +273,10 @@ func (c *Client) GetMulti(ctx context.Context, keys []*datastore.Key, dst interf
 
 // Delete data from the datastore and cache.
 func (c *Client) Delete(ctx context.Context, key *datastore.Key) error {
+	if key == nil {
+		return fmt.Errorf("godscache.Client.Delete: failed deleting item from cache and datastore: you provided a nil key")
+	}
+
 	// Delete the data from the cache, if it's in there.
 	err := c.deleteFromCache(key)
 	if err != nil {
@@ -306,22 +314,24 @@ func (c *Client) DeleteMulti(ctx context.Context, keys []*datastore.Key) error {
 
 // Add an item to the cache.
 func (c *Client) addToCache(key *datastore.Key, data interface{}) error {
-	// Convert data to JSON bytes.
-	dataBytes, err := json.Marshal(data)
-	if err != nil {
-		return fmt.Errorf("godscache.Client.addToCache: failed marshaling data to JSON: %v", err)
-	}
+	if c.MemcacheClient != nil {
+		// Convert data to JSON bytes.
+		dataBytes, err := json.Marshal(data)
+		if err != nil {
+			return fmt.Errorf("godscache.Client.addToCache: failed marshaling data to JSON: %v", err)
+		}
 
-	// Add JSON bytes to memcached server(s), indexed by the string representation of
-	// the datastore key.
-	err = c.MemcacheClient.Set(
-		&memcache.Item{
-			Key:   key.String(),
-			Value: dataBytes,
-		},
-	)
-	if err != nil {
-		return fmt.Errorf("godscache.Client.addToCache: failed adding item to cache: %v", err)
+		// Add JSON bytes to memcached server(s), indexed by the string representation of
+		// the datastore key.
+		err = c.MemcacheClient.Set(
+			&memcache.Item{
+				Key:   key.String(),
+				Value: dataBytes,
+			},
+		)
+		if err != nil {
+			return fmt.Errorf("godscache.Client.addToCache: failed adding item to cache: %v", err)
+		}
 	}
 
 	return nil
@@ -331,6 +341,10 @@ func (c *Client) addToCache(key *datastore.Key, data interface{}) error {
 // and if so, it populates dst with the data. If there is a cache miss, dst is left
 // untouched.
 func (c *Client) getFromCache(key *datastore.Key, dst interface{}) bool {
+	if c.MemcacheClient == nil {
+		return false
+	}
+
 	// Make sure dst is the right type.
 	if dst == nil || reflect.ValueOf(dst).Kind() != reflect.Ptr {
 		return false
@@ -360,6 +374,10 @@ func (c *Client) getFromCache(key *datastore.Key, dst interface{}) bool {
 // data if found in the cache, and nil for keys which aren't cached, in the order
 // of the keys slice.
 func (c *Client) getMultiFromCache(keys []*datastore.Key, dst interface{}) error {
+	if c.MemcacheClient == nil {
+		return nil
+	}
+
 	// Make the key strings slice, for use with memcache's get multi function.
 	keyStrs := make([]string, 0, len(keys))
 	for _, key := range keys {
@@ -399,6 +417,10 @@ func (c *Client) getMultiFromCache(keys []*datastore.Key, dst interface{}) error
 
 // Delete data from cache.
 func (c *Client) deleteFromCache(key *datastore.Key) error {
+	if c.MemcacheClient == nil {
+		return nil
+	}
+
 	// Delete data from memcached server(s).
 	err := c.MemcacheClient.Delete(key.String())
 	if err == memcache.ErrCacheMiss {

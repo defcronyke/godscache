@@ -40,10 +40,12 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	err = c.MemcacheClient.DeleteAll()
-	if err != nil {
-		log.Printf("godscache.TestMain: deleting all data from memcache failed: %v", err)
-		os.Exit(2)
+	if c.MemcacheClient != nil {
+		err = c.MemcacheClient.DeleteAll()
+		if err != nil {
+			log.Printf("godscache.TestMain: deleting all data from memcache failed: %v", err)
+			os.Exit(2)
+		}
 	}
 
 	res := m.Run()
@@ -213,6 +215,34 @@ func TestPutSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed deleting test data from datastore and cache: %v", err)
 	}
+}
+
+func TestPutSuccessNoServers(t *testing.T) {
+	ctx := context.Background()
+
+	servers := os.Getenv("GODSCACHE_MEMCACHED_SERVERS")
+
+	os.Setenv("GODSCACHE_MEMCACHED_SERVERS", "")
+
+	c, err := NewClient(ctx, os.Getenv("GODSCACHE_PROJECT_ID"))
+	if err != nil {
+		t.Fatalf("Instantiating new Client struct with a valid GCP project ID failed: %v", err)
+	}
+
+	key := datastore.IncompleteKey("testPut", nil)
+	src := &TestDbData{TestString: "TestPutSuccessNoServers"}
+
+	key, err = c.Put(ctx, key, src)
+	if err != nil {
+		t.Fatalf("Failed putting data into database: %v", err)
+	}
+
+	err = c.Delete(ctx, key)
+	if err != nil {
+		t.Fatalf("Failed deleting test data from datastore and cache: %v", err)
+	}
+
+	os.Setenv("GODSCACHE_MEMCACHED_SERVERS", servers)
 }
 
 func TestPutFailInvalidSrcType(t *testing.T) {
